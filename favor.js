@@ -871,11 +871,11 @@
 
         // ЄДИНИЙ правильний спосіб для Lampa — це Lampa.Listener.follow('render')
         Lampa.Listener.follow('render', function (e) {
-            // Перевіряємо, чи ми на сторінці закладок
             if (e.name === 'bookmarks') {
                 var $container = e.body.find('.scroll__body');
                 
-                // Очищаємо лише наші елементи перед новим рендером
+                // ГОЛОВНЕ: Видаляємо ВСІ наші елементи перед будь-якою дією
+                // Це прибере дублі, навіть якщо ви поверталися 10 разів
                 $container.find('.custom-type, .new-custom-type').remove();
 
                 // Додаємо кнопку +
@@ -886,6 +886,7 @@
                         Lampa.Input.edit({ title: Lampa.Lang.translate('filter_set_name'), value: '', free: true }, function (value) {
                             if (value && value !== 'card') {
                                 customFavorite.createType(value);
+                                // Після створення папки перемальовуємо поточне вікно
                                 Lampa.Activity.active().activity.render(true);
                             }
                         });
@@ -907,6 +908,9 @@
                     });
                     $container.prepend($reg);
                 });
+
+                // Обов'язково оновлюємо контролер, щоб вибір фокусу працював коректно
+                Lampa.Controller.collectionSet($container);
             }
         });
 
