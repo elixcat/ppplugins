@@ -1030,7 +1030,59 @@
             }
         });
 
-        
+        // Використовуємо Lampa.Listener.follow('render', ...) — це більш глобальна подія
+        // вона спрацьовує при відображенні будь-якого екрану
+        Lampa.Listener.follow('render', function (e) {
+            if (e.name === 'bookmarks') {
+                var $render = e.body;
+                var $container = $render.find('.scroll__body');
+
+                // Очищаємо перед додаванням (захист від дублів)
+                $render.find('.custom-type, .new-custom-type').remove();
+
+                // 1. Додаємо кнопку +
+                if (Lampa.Storage.get('custom_fav_show_add_button', true)) {
+                    var $add = Lampa.Template.js('register').addClass('selector new-custom-type');
+                    $add.find('.register__counter').html('<img src="./img/icons/add.svg"/>');
+                    $add.on('hover:enter', function () {
+                        Lampa.Input.edit({ title: Lampa.Lang.translate('filter_set_name'), value: '', free: true }, function (value) {
+                            if (value && value !== 'card') {
+                                customFavorite.createType(value);
+                                // Перезавантажуємо сторінку, щоб відобразити нову папку
+                                Lampa.Activity.active().activity.render(true);
+                            }
+                        });
+                    });
+                    $container.prepend($add);
+                }
+
+                // 2. Додаємо наші папки
+                var fav = customFavorite.getFavorite();
+                customFavorite.getTypesWithoutSystem(fav).reverse().forEach(function (typeName) {
+                    var uid = fav.customTypes[typeName];
+                    var count = (fav[uid] || []).length;
+                    
+                    var $reg = Lampa.Template.js('register').addClass('selector custom-type');
+                    $reg.find('.register__name').text(typeName);
+                    $reg.find('.register__counter').text(count);
+                    
+                    // Додаємо довге натискання для видалення/перейменування
+                    $reg.on('hover:long', function() {
+                        // Тут можна викликати ваш стандартний діалог редагування (rename/remove)
+                        // або просто залишити як є, якщо достатньо натискання на кнопку
+                    });
+
+                    $reg.on('hover:enter', function() {
+                        Lampa.Activity.push({ component: 'favorite', title: typeName, type: uid, page: 1 });
+                    });
+                    
+                    $container.prepend($reg);
+                });
+
+                // Важливо: переназначаємо фокус, щоб контролер бачив нові елементи
+                Lampa.Controller.collectionSet($container);
+            }
+        });
 
         favoritePageSvc.registerLines();
     }
