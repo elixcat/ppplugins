@@ -841,68 +841,76 @@
 
     var cardFavoriteSvc = new CardFavoriteService();
 
+
+
     function addSettings() {
         if (!Lampa.SettingsApi || typeof Lampa.SettingsApi.addComponent !== 'function') return;
-        
         Lampa.SettingsApi.addComponent({ 
             component: 'custom_favorite_settings', 
             name: Lampa.Lang.translate('custom_fav_settings_name'), 
             icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M19 13H13V19H11V13H5V11H11V5H13V11H19V13Z" fill="currentColor"/></svg>' 
         });
-        
         Lampa.SettingsApi.addParam({ 
             component: 'custom_favorite_settings', 
-            param: { 
-                name: 'custom_fav_show_add_button', 
-                type: 'trigger', 
-                'default': true 
-            }, 
-            field: { 
-                name: Lampa.Lang.translate('custom_fav_button_title'), 
-                description: Lampa.Lang.translate('custom_fav_button_desc') 
-            } 
+            param: { name: 'custom_fav_show_add_button', type: 'trigger', 'default': true }, 
+            field: { name: Lampa.Lang.translate('custom_fav_button_title'), description: Lampa.Lang.translate('custom_fav_button_desc') } 
         });
     }
 
     function start() {
-        if (window.custom_favorites) {
-            return;
-        }
-
+        if (window.custom_favorites) return;
         window.custom_favorites = true;
 
-        // Локалізація
         Lampa.Lang.add({
             custom_fav_settings_name: { ru: 'Кастомные закладки', uk: 'Користувацькі закладки' },
             custom_fav_button_title: { ru: 'Кнопка "Добавить папку"', uk: 'Кнопка "Додати папку"' },
             custom_fav_button_desc: { ru: 'Отображать кнопку "+" в списке закладок', uk: 'Відображати кнопку "+" у списку закладок' },
-            rename: { en: 'Rename', uk: 'Змінити ім’я', ru: 'Изменить имя' },
-            invalid_name: { en: 'Invalid name', uk: 'Некоректне ім’я', ru: 'Некорректное имя' },
             custom_favs: { en: 'Custom bookmarks', uk: 'Користувацькі закладки', ru: 'Пользовательские закладки' }
         });
-        
         addSettings();
 
-        var originalProfileWaiter = window.__profile_extra_waiter;
+        // 
+        Lampa.Listener.follow('bookmarks', function(e) {
+            if (e.type == 'render') {
+                var $render = e.body;
+                var $container = $render.find('.scroll__body');
+                
+                // Видаляємо дублікати, якщо вони вже є
+                $render.find('.custom-type, .new-custom-type').remove();
 
-        window.__profile_extra_waiter = function () {
-            var synced = Lampa.Storage.get(STORAGE_SYNC_KEY, 0) !== 0;
+                // Додаємо кнопку +
+                if (Lampa.Storage.get('custom_fav_show_add_button', true)) {
+                    var $add = Lampa.Template.js('register').addClass('selector new-custom-type');
+                    $add.find('.register__counter').html('<img src="./img/icons/add.svg"/>');
+                    $add.on('hover:enter', function () {
+                        Lampa.Input.edit({ title: Lampa.Lang.translate('filter_set_name'), value: '', free: true }, function (value) {
+                            if (value && value !== 'card') {
+                                customFavorite.createType(value);
+                                Lampa.Activity.active().activity.toggle(); // Перезавантаження
+                            }
+                        });
+                    });
+                    $container.prepend($add);
+                }
 
-            if (typeof originalProfileWaiter === 'function') {
-                synced = synced && !!originalProfileWaiter();
-            }
-
-            return synced;
-        }
-
-        Lampa.Storage.listener.follow('change', function (event) {
-            if (event.name == 'lampac_sync_favorite' && event.value == 0) {
-                Lampa.Storage.set(STORAGE_KEY, '{}', true);
-                Lampa.Storage.set(STORAGE_SYNC_KEY, 0, true);
-
-                customFavorite.init({});
+                // Додаємо наші папки
+                var fav = customFavorite.getFavorite();
+                customFavorite.getTypesWithoutSystem(fav).reverse().forEach(function (typeName) {
+                    var uid = fav.customTypes[typeName];
+                    var count = (fav[uid] || []).length;
+                    
+                    var $reg = Lampa.Template.js('register').addClass('selector custom-type');
+                    $reg.find('.register__name').text(typeName);
+                    $reg.find('.register__counter').text(count);
+                    $reg.on('hover:enter', function() {
+                        Lampa.Activity.push({ component: 'favorite', title: typeName, type: uid, page: 1 });
+                    });
+                    $container.prepend($reg); // Додаємо на початок
+                });
             }
         });
+        
+        
 
         HOST = Lampa.Storage.get('custom_favorite_host', '') || HOST;
         new SyncService().start();
@@ -1007,7 +1015,7 @@
             '.icon--star svg { position: absolute; height: 60%; width: 60%; top: 50%; left: 50%; transform: translate(-50%, -50%) }' +
             '.new-custom-type .register__counter { display:flex; justify-content:center; align-items:center }' +
             '.new-custom-type .register__counter img { height:2.2em; padding:0.4em; }' +
-            '.register.custom-type { background-image: url("https://elixcat.github.io/ppplugins/tap.svg"); background-repeat: no-repeat; background-position: 90% 90%; background-size: 20%; }'
+            '.register.custom-type { background-image: url("https://levende.github.io/lampa-plugins/assets/tap.svg"); background-repeat: no-repeat; background-position: 90% 90%; background-size: 20%; }'
         ).appendTo('head');
 
         Lampa.Listener.follow('full', function (event) {
@@ -1022,34 +1030,7 @@
             }
         });
 
-        Lampa.Storage.listener.follow('change', function (event) {
-            if (event.name !== 'activity') {
-                return;
-            }
-
-            if (Lampa.Activity.active().component === 'bookmarks') {
-                if ($('.new-custom-type').length !== 0) {
-                    return;
-                }
-
-                favoritePageSvc.renderAddButton();
-                var favorite = customFavorite.getFavorite();
-
-                customFavorite.getTypesWithoutSystem(favorite).reverse().forEach(function (typeName) {
-                    var typeUid = favorite.customTypes[typeName];
-                    var typeList = favorite[typeUid] || [];
-                    var typeCounter = typeList.length;
-
-                    favoritePageSvc.renderCustomFavoriteButton({
-                        name: typeName,
-                        uid: typeUid,
-                        counter: typeCounter
-                    });
-                });
-
-                Lampa.Activity.active().activity.toggle();
-            }
-        });
+        
 
         favoritePageSvc.registerLines();
     }
