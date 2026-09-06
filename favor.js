@@ -993,12 +993,17 @@
             }
         });
 
-        Lampa.Listener.follow('render', function (e) {
-            if (e.name === 'bookmarks') {
-                var $container = e.body.find('.scroll__body');
-                
-                // Видаляємо старі кнопки
-                $('.custom-type, .new-custom-type').remove();
+        Lampa.Listener.follow('app', function() {
+            setInterval(function() {
+                var active = Lampa.Activity.active();
+                if (!active || active.component !== 'bookmarks') return;
+
+                // Шукаємо будь-який контейнер, що має клас з назвою "scroll__body"
+                var $container = $('.scroll__body').filter(function() {
+                    return $(this).parents('.bookmarks').length > 0;
+                }).first();
+
+                if ($container.length === 0 || $container.find('.custom-type').length > 0) return;
 
                 // Додаємо +
                 if (Lampa.Storage.get('custom_fav_show_add_button', true)) {
@@ -1027,12 +1032,11 @@
                     $reg.on('hover:enter', function() {
                         Lampa.Activity.push({ component: 'favorite', title: typeName, type: uid, page: 1 });
                     });
-                    
                     $container.prepend($reg);
                 });
 
                 Lampa.Controller.collectionSet($container);
-            }
+            }, 1000);
         });
 
         favoritePageSvc.registerLines();
