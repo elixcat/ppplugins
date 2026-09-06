@@ -38,9 +38,9 @@
     var I18N = {
         plugin_name: { uk: 'UA Коментарі', en: 'UA Comments', ru: 'UA Комментарии' },
         block_title: { uk: 'UA Коментарі', en: 'UA Comments', ru: 'UA Комментарии' },
-        status_searching: { uk: 'Шукаємо коментарі...', en: 'Searching comments...', ru: 'Ищем комментарии...' },
+        status_searching: { uk: 'Шукаю', en: 'Searching comments...', ru: 'Ищем комментарии...' },
         status_not_found: { uk: 'Коментарів не знайдено', en: 'Comments not found', ru: 'Комментарии не найдены' },
-        button_comments: { uk: 'Коментарі', en: 'Comments', ru: 'Комментарии' },
+        button_comments: { uk: 'Коми', en: 'Comments', ru: 'Комментарии' },
         read_full: { uk: 'Читати повністю', en: 'Read full', ru: 'Читать полностью' },
         user: { uk: 'Користувач', en: 'User', ru: 'Пользователь' },
         critic: { uk: 'Критик', en: 'Critic', ru: 'Критик' },
