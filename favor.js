@@ -7,6 +7,7 @@
     var STORAGE_KEY = "custom_favorite";
     var STORAGE_SYNC_KEY = "lampac_sync_custom_favorite";
     var SETTINGS_KEY = "custom_fav_settings";
+    var PLUGIN_COMPONENT = 'custom_fav_settings';
 
     // Налаштування плагіна
     function getSettings() {
@@ -19,6 +20,49 @@
 
     function saveSettings(settings) {
         Lampa.Storage.set(SETTINGS_KEY, settings);
+    }
+
+    // Додаємо налаштування через API Лампи
+    function addSettings() {
+        if (!Lampa.SettingsApi || typeof Lampa.SettingsApi.addComponent !== 'function') return;
+        
+        // Додаємо компонент в налаштування
+        Lampa.SettingsApi.addComponent({ 
+            component: PLUGIN_COMPONENT, 
+            name: Lampa.Lang.translate('custom_favs_settings'), 
+            icon: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>' 
+        });
+        
+        // Додаємо параметр - перемикач
+        var hideAddButton = getSettings().hideAddButton;
+        Lampa.SettingsApi.addParam({ 
+            component: PLUGIN_COMPONENT, 
+            param: { 
+                name: 'custom_fav_hide_add_button', 
+                type: 'toggle', 
+                'default': false,
+                value: hideAddButton
+            }, 
+            field: { 
+                name: Lampa.Lang.translate('custom_favs_show_add'), 
+                description: Lampa.Lang.translate('custom_favs_show_add_desc') 
+            },
+            onChange: function(value) {
+                var settings = getSettings();
+                settings.hideAddButton = value;
+                saveSettings(settings);
+                toggleAddButton(value);
+            }
+        });
+    }
+
+    function toggleAddButton(hide) {
+        var $addButton = $('.new-custom-type');
+        if (hide) {
+            $addButton.hide();
+        } else {
+            $addButton.show();
+        }
     }
 
     function CustomFavoriteFolder(data) {
@@ -857,95 +901,6 @@
 
     var cardFavoriteSvc = new CardFavoriteService();
 
-    // Додаємо пункт в налаштування через правильний API Лампи
-    function addSettingsMenuItem() {
-        // Додаємо переклади
-        Lampa.Lang.add({
-            custom_favs_settings: {
-                en: 'Custom folders',
-                uk: 'Користувацькі папки',
-                ru: 'Пользовательские папки'
-            },
-            custom_favs_on: {
-                en: 'Show add button',
-                uk: 'Показувати кнопку додавання',
-                ru: 'Показывать кнопку добавления'
-            },
-            custom_favs_off: {
-                en: 'Hide add button',
-                uk: 'Приховувати кнопку додавання',
-                ru: 'Скрывать кнопку добавления'
-            }
-        });
-
-        // Чекаємо поки з'явиться меню налаштувань
-        var checkInterval = setInterval(function() {
-            var $settingsItems = $('.settings-item');
-            if ($settingsItems.length > 0) {
-                clearInterval(checkInterval);
-                
-                // Перевіряємо чи вже додали
-                if ($('.settings-item--custom-favs').length === 0) {
-                    renderSettingsItem();
-                }
-            }
-        }, 500);
-
-        // Також слухаємо подію відкриття налаштувань
-        Lampa.Listener.follow('settings', function(event) {
-            if (event.type === 'open') {
-                setTimeout(function() {
-                    if ($('.settings-item--custom-favs').length === 0) {
-                        renderSettingsItem();
-                    }
-                }, 200);
-            }
-        });
-    }
-
-    function renderSettingsItem() {
-        var settings = getSettings();
-        
-        var $item = $('<div class="settings-item settings-item--custom-favs selector"></div>');
-        var $title = $('<div class="settings-item__title">' + Lampa.Lang.translate('custom_favs_settings') + '</div>');
-        var $value = $('<div class="settings-item__value">' + (settings.hideAddButton ? Lampa.Lang.translate('custom_favs_off') : Lampa.Lang.translate('custom_favs_on')) + '</div>');
-
-        $item.append($title);
-        $item.append($value);
-
-        // Шукаємо місце для вставки (перед пунктом "Про плагін" або в кінець)
-        var $aboutItem = $('.settings-item').filter(function() {
-            return $(this).find('.settings-item__title').text().trim() === Lampa.Lang.translate('about');
-        });
-
-        if ($aboutItem.length > 0) {
-            $aboutItem.before($item);
-        } else {
-            $('.settings-item').last().after($item);
-        }
-
-        $item.on('hover:enter', function() {
-            var settings = getSettings();
-            settings.hideAddButton = !settings.hideAddButton;
-            saveSettings(settings);
-
-            // Оновлюємо текст
-            $value.text(settings.hideAddButton ? Lampa.Lang.translate('custom_favs_off') : Lampa.Lang.translate('custom_favs_on'));
-
-            // Ховаємо/показуємо кнопку додавання
-            toggleAddButton(settings.hideAddButton);
-        });
-    }
-
-    function toggleAddButton(hide) {
-        var $addButton = $('.new-custom-type');
-        if (hide) {
-            $addButton.hide();
-        } else {
-            $addButton.show();
-        }
-    }
-
     function start() {
         if (window.custom_favorites) {
             return;
@@ -969,6 +924,21 @@
                 en: 'Custom bookmarks',
                 uk: 'Користувацькі закладки',
                 ru: 'Пользовательские закладки'
+            },
+            custom_favs_settings: {
+                en: 'Custom folders',
+                uk: 'Користувацькі папки',
+                ru: 'Пользовательские папки'
+            },
+            custom_favs_show_add: {
+                en: 'Show add button',
+                uk: 'Показувати кнопку додавання',
+                ru: 'Показывать кнопку добавления'
+            },
+            custom_favs_show_add_desc: {
+                en: 'Show/hide the button for adding new folders',
+                uk: 'Показувати/приховувати кнопку додавання нових папок',
+                ru: 'Показывать/скрывать кнопку добавления новых папок'
             }
         });
 
@@ -1096,8 +1066,7 @@
             '.icon--star svg { position: absolute; height: 60%; width: 60%; top: 50%; left: 50%; transform: translate(-50%, -50%) }' +
             '.new-custom-type .register__counter { display:flex; justify-content:center; align-items:center }' +
             '.new-custom-type .register__counter img { height:2.2em; padding:0.4em; }' +
-            '.register.custom-type { background-image: url("https://levende.github.io/lampa-plugins/assets/tap.svg"); background-repeat: no-repeat; background-position: 90% 90%; background-size: 20%; }' +
-            '.settings-item--custom-favs .settings-item__value { text-transform: capitalize; }'
+            '.register.custom-type { background-image: url("https://levende.github.io/lampa-plugins/assets/tap.svg"); background-repeat: no-repeat; background-position: 90% 90%; background-size: 20%; }'
         ).appendTo('head');
 
         Lampa.Listener.follow('full', function (event) {
@@ -1148,8 +1117,8 @@
 
         favoritePageSvc.registerLines();
 
-        // Додаємо пункт в налаштування
-        addSettingsMenuItem();
+        // Додаємо налаштування через API
+        addSettings();
     }
 
     if (window.appready) {
@@ -1161,4 +1130,4 @@
             }
         });
     }
-})()
+})();
