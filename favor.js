@@ -1039,21 +1039,23 @@
 
         Lampa.Listener.follow('render', function (event) {
         if (event.name === 'bookmarks') {
-            event.body.find('.custom-type, .new-custom-type').remove();
+            setTimeout(function() {
+                $('.custom-type, .new-custom-type').remove();
 
-            favoritePageSvc.renderAddButton();
+                favoritePageSvc.renderAddButton();
 
-            var favorite = customFavorite.getFavorite();
-            customFavorite.getTypesWithoutSystem(favorite).reverse().forEach(function (typeName) {
-                var typeUid = favorite.customTypes[typeName];
-                var typeList = favorite[typeUid] || [];
+                var favorite = customFavorite.getFavorite();
+                customFavorite.getTypesWithoutSystem(favorite).reverse().forEach(function (typeName) {
+                    var typeUid = favorite.customTypes[typeName];
+                    var typeList = favorite[typeUid] || [];
 
-                favoritePageSvc.renderCustomFavoriteButton({
-                    name: typeName,
-                    uid: typeUid,
-                    counter: typeList.length
+                    favoritePageSvc.renderCustomFavoriteButton({
+                        name: typeName,
+                        uid: typeUid,
+                        counter: typeList.length
+                    });
                 });
-            });
+            }, 100);
         }
     });
 
