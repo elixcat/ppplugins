@@ -610,6 +610,12 @@
     FavoritePageService.prototype.renderAddButton = function () {
         var self = this;
 
+        // Перевіряємо чи вже є кнопка
+        if ($('.new-custom-type').length) {
+            this.updateAddButtonVisibility();
+            return $('.new-custom-type');
+        }
+
         var $register = Lampa.Template.js('register').addClass('selector').addClass('new-custom-type');
         $register.find('.register__counter').html('<img src="./img/icons/add.svg"/>');
 
@@ -658,7 +664,19 @@
                 'opacity': '0',
                 'overflow': 'hidden',
                 'pointer-events': 'none',
-                'z-index': '-1'
+                'z-index': '-1',
+                'margin': '0',
+                'padding': '0'
+            });
+            // Зменшуємо також вміст кнопки
+            $button.find('.register__counter').css({
+                'width': '1px',
+                'height': '1px',
+                'overflow': 'hidden'
+            });
+            $button.find('.register__counter img').css({
+                'width': '1px',
+                'height': '1px'
             });
         } else {
             $button.css({
@@ -670,7 +688,18 @@
                 'opacity': '',
                 'overflow': '',
                 'pointer-events': '',
-                'z-index': ''
+                'z-index': '',
+                'margin': '',
+                'padding': ''
+            });
+            $button.find('.register__counter').css({
+                'width': '',
+                'height': '',
+                'overflow': ''
+            });
+            $button.find('.register__counter img').css({
+                'width': '',
+                'height': ''
             });
         }
     }
@@ -906,7 +935,8 @@
                 description: Lampa.Lang.translate('custom_favorite_hide_add_button_desc')
             },
             onChange: function (value) {
-                Lampa.Storage.set(SETTINGS_HIDE_BUTTON_KEY, value === 'true' || value === true);
+                var boolValue = value === 'true' || value === true;
+                Lampa.Storage.set(SETTINGS_HIDE_BUTTON_KEY, boolValue);
                 favoritePageSvc.updateAddButtonVisibility();
             }
         });
@@ -1101,35 +1131,41 @@
             }
         });
 
+        // Змінено логіку обробки події activity
         Lampa.Storage.listener.follow('change', function (event) {
             if (event.name !== 'activity') {
                 return;
             }
 
-            if (Lampa.Activity.active().component === 'bookmarks') {
-                if ($('.new-custom-type').length !== 0) {
-                    // Оновлюємо видимість кнопки при переході на сторінку
-                    favoritePageSvc.updateAddButtonVisibility();
-                    return;
-                }
-
-                favoritePageSvc.renderAddButton();
-                var favorite = customFavorite.getFavorite();
-
-                customFavorite.getTypesWithoutSystem(favorite).reverse().forEach(function (typeName) {
-                    var typeUid = favorite.customTypes[typeName];
-                    var typeList = favorite[typeUid] || [];
-                    var typeCounter = typeList.length;
-
-                    favoritePageSvc.renderCustomFavoriteButton({
-                        name: typeName,
-                        uid: typeUid,
-                        counter: typeCounter
-                    });
-                });
-
-                Lampa.Activity.active().activity.toggle();
+            var activeActivity = Lampa.Activity.active();
+            if (!activeActivity || activeActivity.component !== 'bookmarks') {
+                return;
             }
+
+            // Якщо кнопка вже є - просто оновлюємо її видимість
+            if ($('.new-custom-type').length) {
+                favoritePageSvc.updateAddButtonVisibility();
+                return;
+            }
+
+            // Створюємо кнопку тільки якщо її немає
+            favoritePageSvc.renderAddButton();
+            
+            // Додаємо існуючі папки
+            var favorite = customFavorite.getFavorite();
+            customFavorite.getTypesWithoutSystem(favorite).reverse().forEach(function (typeName) {
+                var typeUid = favorite.customTypes[typeName];
+                var typeList = favorite[typeUid] || [];
+                var typeCounter = typeList.length;
+
+                favoritePageSvc.renderCustomFavoriteButton({
+                    name: typeName,
+                    uid: typeUid,
+                    counter: typeCounter
+                });
+            });
+
+            Lampa.Activity.active().activity.toggle();
         });
 
         // Додаємо налаштування
