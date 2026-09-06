@@ -7,6 +7,81 @@
 
     var UACOMMENTS_VERSION = '2.1.0';
 
+// === ПОЧАТОК БЛОКУ НАЛАГОДЖЕННЯ ===
+// Це створить плаваюче вікно з логами прямо у Lampa
+
+var debugWindow = null;
+var debugLogs = [];
+
+function createDebugWindow() {
+    if (debugWindow) return;
+    debugWindow = document.createElement('div');
+    debugWindow.id = 'uac-debug-window';
+    debugWindow.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 400px;
+        max-height: 300px;
+        background: rgba(0,0,0,0.85);
+        color: #0f0;
+        font-family: monospace;
+        font-size: 12px;
+        padding: 10px;
+        border-radius: 8px;
+        overflow-y: auto;
+        z-index: 99999;
+        border: 1px solid #0f0;
+        box-shadow: 0 0 20px rgba(0,255,0,0.3);
+        pointer-events: auto;
+    `;
+    // Заголовок для закриття
+    var header = document.createElement('div');
+    header.style.cssText = 'display:flex;justify-content:space-between;margin-bottom:8px;color:#fff;font-weight:bold;cursor:move;';
+    header.innerHTML = '<span>🔍 UA Comments Debug</span><span id="uac-debug-close" style="cursor:pointer;color:#f00;">✕</span>';
+    debugWindow.appendChild(header);
+    
+    var logContainer = document.createElement('div');
+    logContainer.id = 'uac-debug-content';
+    debugWindow.appendChild(logContainer);
+    
+    document.body.appendChild(debugWindow);
+    
+    document.getElementById('uac-debug-close').addEventListener('click', function() {
+        if (debugWindow) {
+            debugWindow.style.display = 'none';
+        }
+    });
+}
+
+function debugLog(message, data) {
+    if (!debugWindow) {
+        createDebugWindow();
+    }
+    var logContainer = document.getElementById('uac-debug-content');
+    if (!logContainer) return;
+    var entry = document.createElement('div');
+    entry.style.cssText = 'border-bottom:1px solid #333;padding:3px 0;word-break:break-all;';
+    var time = new Date().toLocaleTimeString();
+    var text = '[' + time + '] ' + message;
+    if (data !== undefined) {
+        try {
+            text += ' ' + JSON.stringify(data, null, 2);
+        } catch (e) {
+            text += ' [Object]';
+        }
+    }
+    entry.textContent = text;
+    logContainer.appendChild(entry);
+    // Автоматично прокручуємо вниз
+    debugWindow.scrollTop = debugWindow.scrollHeight;
+    // Показуємо вікно, якщо воно було приховане
+    if (debugWindow.style.display === 'none') {
+        debugWindow.style.display = 'block';
+    }
+}
+// === КІНЕЦЬ БЛОКУ НАЛАГОДЖЕННЯ ===
+    
     function backendUrl() {
     return 'https://shy-water-b860.talkingsatana.workers.dev/fetch?url=' + encodeURIComponent('https://kinohub.uk/lite/uacomments/fetch');
     }
@@ -142,53 +217,61 @@
     var fetchPending = {};
 
     function fetchAll(movie, done) {
-        if (!movie) { done([]); return; }
+    debugLog('=== НОВИЙ ЗАПИТ ===');
+    debugLog('Дані фільму:', { imdb: movie.imdb_id, title: movie.title, year: movieYear(movie) });
 
-        var imdb = movie.imdb_id || '';
-        var title = movie.title || movie.name || '';
-        var original = movie.original_title || movie.original_name || '';
-        var year = movieYear(movie) || '';
-        var sources = [];
-        if (getBool('uacom_src_uakino', true)) sources.push('uakino');
-        if (getBool('uacom_src_uaflix', true)) sources.push('uaflix');
-        if (getBool('uacom_src_uaserials', true)) sources.push('uaserials');
-        if (getBool('uacom_src_kinobaza', true)) sources.push('kinobaza');
-        if (!sources.length) { done([]); return; }
+    if (!movie) { debugLog('Помилка: немає даних фільму'); done([]); return; }
 
-        var params = [];
-        if (imdb) params.push('imdb_id=' + encodeURIComponent(imdb));
-        if (title) params.push('title=' + encodeURIComponent(title));
-        if (original && original.toLowerCase() !== title.toLowerCase()) params.push('original_title=' + encodeURIComponent(original));
-        if (year) params.push('year=' + encodeURIComponent(year));
-        params.push('sources=' + encodeURIComponent(sources.join(',')));
+    var imdb = movie.imdb_id || '';
+    var title = movie.title || movie.name || '';
+    var original = movie.original_title || movie.original_name || '';
+    var year = movieYear(movie) || '';
+    var sources = [];
+    if (getBool('uacom_src_uakino', true)) sources.push('uakino');
+    if (getBool('uacom_src_uaflix', true)) sources.push('uaflix');
+    if (getBool('uacom_src_uaserials', true)) sources.push('uaserials');
+    if (getBool('uacom_src_kinobaza', true)) sources.push('kinobaza');
+    if (!sources.length) { debugLog('Помилка: немає активних джерел'); done([]); return; }
 
-        var url = backendUrl() + '?' + params.join('&');
-        var cacheKey = [imdb, title, original, year, sources.join(',')].join('|').toLowerCase();
-        var memo = fetchMemo[cacheKey];
-        if (memo && memo.expires > Date.now()) { done(memo.list.slice()); return; }
-        if (fetchPending[cacheKey]) { fetchPending[cacheKey].push(done); return; }
-        fetchPending[cacheKey] = [done];
+    var params = [];
+    if (imdb) params.push('imdb_id=' + encodeURIComponent(imdb));
+    if (title) params.push('title=' + encodeURIComponent(title));
+    if (original && original.toLowerCase() !== title.toLowerCase()) params.push('original_title=' + encodeURIComponent(original));
+    if (year) params.push('year=' + encodeURIComponent(year));
+    params.push('sources=' + encodeURIComponent(sources.join(',')));
 
-        function finish(list) {
+    var url = backendUrl() + '?' + params.join('&');
+    debugLog('Сформований URL запиту:', url);
+
+    var cacheKey = [imdb, title, original, year, sources.join(',')].join('|').toLowerCase();
+    var memo = fetchMemo[cacheKey];
+    if (memo && memo.expires > Date.now()) {
+        debugLog('Використовую кеш, кількість коментарів:', memo.list.length);
+        done(memo.list.slice());
+        return;
+    }
+
+    debugLog('Відправляю AJAX запит...');
+    $.ajax({
+        url: url,
+        method: 'GET',
+        timeout: 22000,
+        dataType: 'json',
+        success: function (list) {
+            debugLog('✅ УСПІШНА ВІДПОВІДЬ, отримано коментарів:', list ? list.length : 0);
+            if (list && list.length > 0) {
+                debugLog('Перший коментар:', list[0]);
+            }
             list = Array.isArray(list) ? list : [];
             fetchMemo[cacheKey] = { list: list, expires: Date.now() + (list.length ? 600000 : 120000) };
-            var callbacks = fetchPending[cacheKey] || [];
-            delete fetchPending[cacheKey];
-            callbacks.forEach(function (callback) { try { callback(list.slice()); } catch (e) {} });
+            done(list.slice());
+        },
+        error: function (xhr, status, error) {
+            debugLog('❌ ПОМИЛКА AJAX:', status, error);
+            debugLog('Текст відповіді:', xhr.responseText);
+            done([]);
         }
-
-        $.ajax({
-            url: url,
-            method: 'GET',
-            timeout: 22000,
-            dataType: 'json',
-            success: function (list) {
-                finish(list);
-            },
-            error: function () {
-                finish([]);
-            }
-        });
+    });
     }
 
     function activityRender(activity) {
