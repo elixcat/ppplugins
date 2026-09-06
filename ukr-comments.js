@@ -7,9 +7,10 @@
 
     var UACOMMENTS_VERSION = '2.1.0';
 
-    // ⚠️ ЄДИНЕ МІСЦЕ, ЯКЕ МИ ЗМІНЮЄМО
     function backendUrl() {
-        return 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://kinohub.uk/lite/uacomments/fetch');
+    const proxy = 'https://shy-water-b860.talkingsatana.workers.dev/?url=';
+    const target = 'https://kinohub.uk/lite/uacomments/fetch';
+    return proxy + encodeURIComponent(target);
     }
 
     // Далі йде решта оригінального коду (він НЕ змінюється)
