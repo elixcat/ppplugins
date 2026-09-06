@@ -7,14 +7,12 @@
 
     var UACOMMENTS_VERSION = '2.1.0';
 
-    //  Модифікація команди BazarNet | LampaUa.
-    // Плагін збирає українські коментарі через серверний API Lampac (lite/uacomments/fetch).
-
+    // ⚠️ ЄДИНЕ МІСЦЕ, ЯКЕ МИ ЗМІНЮЄМО
     function backendUrl() {
-    return 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://kinohub.uk/lite/uacomments/fetch');
-}
+        return 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://kinohub.uk/lite/uacomments/fetch');
+    }
 
-    // Поточний стан плагіна.
+    // Далі йде решта оригінального коду (він НЕ змінюється)
     var state = {
         active: false,
         activity: null,
@@ -34,7 +32,6 @@
         hideTimer: 0
     };
 
-    // Локалізація інтерфейсу (uk / en / ru).
     var I18N = {
         plugin_name: { uk: 'UA Коментарі', en: 'UA Comments', ru: 'UA Комментарии' },
         block_title: { uk: 'UA Коментарі', en: 'UA Comments', ru: 'UA Комментарии' },
@@ -86,7 +83,6 @@
         return pack[lang] || pack.uk || key;
     }
 
-    // Допоміжне читання boolean-налаштувань із Lampa.Storage.
     function getBool(key, def) {
         var value = Lampa.Storage.get(key);
         if (value === undefined || value === null) return !!def;
@@ -98,7 +94,6 @@
         return value === undefined || value === null || value === '' ? def : value;
     }
 
-    // Оновлення CSS-змінних відповідно до налаштувань користувача.
     function updateCssVars() {
         try {
             var root = document.documentElement;
@@ -109,11 +104,11 @@
 
     function escapeHtml(str) {
         return String(str || '')
-            .replace(/&/g, '&')
-            .replace(/</g, '<')
-            .replace(/>/g, '>')
-            .replace(/"/g, '"')
-            .replace(/'/g, ''');
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     }
 
     function safeTextToHtml(str) {
@@ -130,7 +125,6 @@
         } catch (e) {}
     }
 
-    // Оновлює колекцію селекторів для коректної навігації (up/down/left/right).
     function refreshControllerCollection() {
         try {
             if (!state.active || Viewer.active || !window.Lampa || !Lampa.Controller || !Lampa.Controller.collectionSet) return;
@@ -148,7 +142,6 @@
     var fetchMemo = {};
     var fetchPending = {};
 
-    // Виклик серверного API Lampac для збору коментарів.
     function fetchAll(movie, done) {
         if (!movie) { done([]); return; }
 
@@ -209,7 +202,6 @@
         return $();
     }
 
-    // Пошук контейнера кнопок у картці (стандартна тема / Applecation).
     function findButtonHost(activity) {
         var render = activityRender(activity);
         var host;
@@ -329,7 +321,6 @@
         return source || t('source_default');
     }
 
-    // Зберігає коментарі та оновлює кнопку у картці.
     function renderComments(list) {
         if (!state.active) return;
         state.comments = Array.isArray(list) ? list : [];
@@ -379,8 +370,6 @@
         Viewer.root.find('.uac-viewer-right').toggleClass('active', Viewer.index < Viewer.list.length - 1);
     }
 
-    // Мобільні жести: вліво/вправо — наступний/попередній коментар,
-    // короткий свайп угору від нижнього краю — закрити перегляд.
     function bindViewerGestures(root) {
         if (!root || !root.length) return;
         var modal = root.find('.uac-viewer-modal')[0];
@@ -420,7 +409,6 @@
             var horizontal = Math.abs(dx) > 14 && Math.abs(dx) > Math.abs(dy) * 1.15;
             var closing = closeCandidate && dy < -14 && Math.abs(dy) > Math.abs(dx) * 1.15;
 
-            // Не блокуємо звичайне вертикальне прокручування тексту.
             if ((horizontal || closing) && event.cancelable) event.preventDefault();
         }, false);
 
@@ -452,7 +440,6 @@
         modal.addEventListener('touchcancel', resetGesture, false);
     }
 
-    // Відкриття модального вікна з повним текстом коментаря.
     function openViewer(list, index) {
         closeViewer();
 
@@ -578,7 +565,6 @@
         });
     }
 
-    // Стилі плагіна: кнопка в картці + Apple-подібне модальне вікно.
     function addStyles() {
         var style = document.createElement('style');
         style.textContent =
@@ -621,7 +607,6 @@
         document.head.appendChild(style);
     }
 
-    // Додавання налаштувань у меню Lampa.
     function addSettings() {
         if (!Lampa.SettingsApi) return;
 
@@ -660,7 +645,6 @@
             });
         }
 
-        // Інформаційний блок про плагін.
         Lampa.SettingsApi.addParam({
             component: component,
             param: {
@@ -703,14 +687,12 @@
         }, '1.25em');
     }
 
-    // Головна ініціалізація плагіна.
     function init() {
         addStyles();
         updateCssVars();
         addSettings();
 
         Lampa.Listener.follow('full', function (event) {
-            // У Lampa подія завершення картки історично називається саме "complite".
             if (event.type === 'complite') {
                 start(event.data && event.data.movie, event.object && event.object.activity);
             } else if (event.type === 'destroy' || event.type === 'start') {
