@@ -624,7 +624,6 @@
         var self = this;
         var settings = getSettings();
 
-        // Якщо кнопка прихована в налаштуваннях - не показуємо
         if (settings.hideAddButton) {
             return;
         }
@@ -858,61 +857,82 @@
 
     var cardFavoriteSvc = new CardFavoriteService();
 
-    // Функція для додавання пункту в налаштування
+    // Додаємо пункт в налаштування через правильний API Лампи
     function addSettingsMenuItem() {
+        // Додаємо переклади
+        Lampa.Lang.add({
+            custom_favs_settings: {
+                en: 'Custom folders',
+                uk: 'Користувацькі папки',
+                ru: 'Пользовательские папки'
+            },
+            custom_favs_on: {
+                en: 'Show add button',
+                uk: 'Показувати кнопку додавання',
+                ru: 'Показывать кнопку добавления'
+            },
+            custom_favs_off: {
+                en: 'Hide add button',
+                uk: 'Приховувати кнопку додавання',
+                ru: 'Скрывать кнопку добавления'
+            }
+        });
+
         // Чекаємо поки з'явиться меню налаштувань
-        var settingsMenuInterval = setInterval(function () {
+        var checkInterval = setInterval(function() {
             var $settingsItems = $('.settings-item');
             if ($settingsItems.length > 0) {
-                clearInterval(settingsMenuInterval);
-                renderSettingsItem();
+                clearInterval(checkInterval);
+                
+                // Перевіряємо чи вже додали
+                if ($('.settings-item--custom-favs').length === 0) {
+                    renderSettingsItem();
+                }
             }
         }, 500);
 
         // Також слухаємо подію відкриття налаштувань
-        Lampa.Listener.follow('settings', function (event) {
+        Lampa.Listener.follow('settings', function(event) {
             if (event.type === 'open') {
-                // Невелика затримка для рендерингу
-                setTimeout(function () {
-                    renderSettingsItem();
-                }, 100);
+                setTimeout(function() {
+                    if ($('.settings-item--custom-favs').length === 0) {
+                        renderSettingsItem();
+                    }
+                }, 200);
             }
         });
     }
 
     function renderSettingsItem() {
         var settings = getSettings();
-        var $settingsItems = $('.settings-item');
-
-        // Перевіряємо чи вже додали наш пункт
-        if ($('.settings-item--custom-favs').length > 0) {
-            return;
-        }
-
+        
         var $item = $('<div class="settings-item settings-item--custom-favs selector"></div>');
         var $title = $('<div class="settings-item__title">' + Lampa.Lang.translate('custom_favs_settings') + '</div>');
-        var $value = $('<div class="settings-item__value">' + (settings.hideAddButton ? Lampa.Lang.translate('off') : Lampa.Lang.translate('on')) + '</div>');
+        var $value = $('<div class="settings-item__value">' + (settings.hideAddButton ? Lampa.Lang.translate('custom_favs_off') : Lampa.Lang.translate('custom_favs_on')) + '</div>');
 
         $item.append($title);
         $item.append($value);
 
-        // Вставляємо перед "Про плагін" або в кінець
-        var $aboutItem = $('.settings-item:contains("' + Lampa.Lang.translate('about') + '")');
+        // Шукаємо місце для вставки (перед пунктом "Про плагін" або в кінець)
+        var $aboutItem = $('.settings-item').filter(function() {
+            return $(this).find('.settings-item__title').text().trim() === Lampa.Lang.translate('about');
+        });
+
         if ($aboutItem.length > 0) {
             $aboutItem.before($item);
         } else {
-            $settingsItems.last().after($item);
+            $('.settings-item').last().after($item);
         }
 
-        $item.on('hover:enter', function () {
+        $item.on('hover:enter', function() {
             var settings = getSettings();
             settings.hideAddButton = !settings.hideAddButton;
             saveSettings(settings);
 
-            // Оновлюємо значення
-            $value.text(settings.hideAddButton ? Lampa.Lang.translate('off') : Lampa.Lang.translate('on'));
+            // Оновлюємо текст
+            $value.text(settings.hideAddButton ? Lampa.Lang.translate('custom_favs_off') : Lampa.Lang.translate('custom_favs_on'));
 
-            // Оновлюємо відображення кнопки додавання
+            // Ховаємо/показуємо кнопку додавання
             toggleAddButton(settings.hideAddButton);
         });
     }
@@ -937,33 +957,18 @@
         Lampa.Lang.add({
             rename: {
                 en: 'Rename',
-                uk: 'Змінити ім’я',
+                uk: 'Змінити ім\'я',
                 ru: 'Изменить имя'
             },
             invalid_name: {
                 en: 'Invalid name',
-                uk: 'Некоректне ім’я',
+                uk: 'Некоректне ім\'я',
                 ru: 'Некорректное имя'
             },
             custom_favs: {
                 en: 'Custom bookmarks',
                 uk: 'Користувацькі закладки',
                 ru: 'Пользовательские закладки'
-            },
-            custom_favs_settings: {
-                en: 'Custom folders',
-                uk: 'Користувацькі папки',
-                ru: 'Пользовательские папки'
-            },
-            on: {
-                en: 'On',
-                uk: 'Увімкнено',
-                ru: 'Включено'
-            },
-            off: {
-                en: 'Off',
-                uk: 'Вимкнено',
-                ru: 'Отключено'
             }
         });
 
@@ -1114,7 +1119,6 @@
 
             if (Lampa.Activity.active().component === 'bookmarks') {
                 if ($('.new-custom-type').length !== 0) {
-                    // Застосовуємо налаштування приховування при завантаженні сторінки
                     var settings = getSettings();
                     toggleAddButton(settings.hideAddButton);
                     return;
@@ -1135,7 +1139,6 @@
                     });
                 });
 
-                // Застосовуємо налаштування приховування
                 var settings = getSettings();
                 toggleAddButton(settings.hideAddButton);
 
