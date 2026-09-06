@@ -11,8 +11,10 @@
     // Плагін збирає українські коментарі через серверний API Lampac (lite/uacomments/fetch).
 
     function backendUrl() {
-        return 'https://kinohub.uk/lite/uacomments/fetch';
-    }
+    var proxy = 'https://corsproxy.io/?key=5e44974d&url=';
+    var target = 'https://kinohub.uk/lite/uacomments/fetch';
+    return proxy + encodeURIComponent(target);
+}
 
     // Поточний стан плагіна.
     var state = {
