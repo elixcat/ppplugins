@@ -26,7 +26,7 @@
     function addSettings() {
         if (!Lampa.SettingsApi || typeof Lampa.SettingsApi.addComponent !== 'function') return;
         
-        // Додаємо компонент в налаштування
+        // Додаємо компонент з параметрами
         Lampa.SettingsApi.addComponent({ 
             component: PLUGIN_COMPONENT, 
             name: Lampa.Lang.translate('custom_favs_settings'), 
