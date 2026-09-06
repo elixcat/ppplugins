@@ -994,44 +994,52 @@
         });
 
         Lampa.Listener.follow('render', function (event) {
-            if (event.name === 'bookmarks') {
-                var $container = event.body.find('.scroll__body');
+          // Використовуємо інтервал для гарантованого відстеження закладок
+        var checkInterval = setInterval(function() {
+            var active = Lampa.Activity.active();
+            if (active && active.component === 'bookmarks') {
+                var $container = $('.bookmarks .scroll__body');
                 
-                // Видаляємо тільки наші кнопки
-                $container.find('.custom-type, .new-custom-type').remove();
-
-                // Кнопка +
-                var $add = Lampa.Template.js('register').addClass('selector new-custom-type');
-                $add.find('.register__counter').html('<img src="./img/icons/add.svg"/>');
-                $add.on('hover:enter', function () {
-                    Lampa.Input.edit({ title: Lampa.Lang.translate('filter_set_name'), value: '', free: true }, function (value) {
-                        if (value && value !== 'card') {
-                            customFavorite.createType(value);
-                            Lampa.Activity.active().activity.render(true);
-                        }
-                    });
-                });
-                $container.prepend($add);
-
-                // Наші папки
-                var favorite = customFavorite.getFavorite();
-                customFavorite.getTypesWithoutSystem(favorite).reverse().forEach(function (typeName) {
-                    var typeUid = favorite.customTypes[typeName];
-                    var typeList = favorite[typeUid] || [];
+                // Якщо контейнер є, але кнопки ще не додані (або їх треба оновити)
+                if ($container.length && $container.find('.custom-type').length === 0) {
                     
-                    var $reg = Lampa.Template.js('register').addClass('selector custom-type custom-type-' + typeUid);
-                    $reg.find('.register__name').text(typeName);
-                    $reg.find('.register__counter').text(typeList.length);
-                    $reg.on('hover:enter', function() {
-                        Lampa.Activity.push({ component: 'favorite', title: typeName, type: typeUid, page: 1 });
-                    });
-                    
-                    $container.prepend($reg);
-                });
+                    // Додаємо кнопку +
+                    if (Lampa.Storage.get('custom_fav_show_add_button', true)) {
+                        var $add = Lampa.Template.js('register').addClass('selector new-custom-type');
+                        $add.find('.register__counter').html('<img src="./img/icons/add.svg"/>');
+                        $add.on('hover:enter', function () {
+                            Lampa.Input.edit({ title: Lampa.Lang.translate('filter_set_name'), value: '', free: true }, function (value) {
+                                if (value && value !== 'card') {
+                                    customFavorite.createType(value);
+                                    Lampa.Activity.active().activity.render(true);
+                                }
+                            });
+                        });
+                        $container.prepend($add);
+                    }
 
-                Lampa.Controller.collectionSet($container);
+                    // Додаємо папки
+                    var favorite = customFavorite.getFavorite();
+                    customFavorite.getTypesWithoutSystem(favorite).reverse().forEach(function (typeName) {
+                        var uid = favorite.customTypes[typeName];
+                        var typeList = favorite[uid] || [];
+                        
+                        var $reg = Lampa.Template.js('register').addClass('selector custom-type custom-type-' + uid);
+                        $reg.find('.register__name').text(typeName);
+                        $reg.find('.register__counter').text(typeList.length);
+                        $reg.on('hover:enter', function() {
+                            Lampa.Activity.push({ component: 'favorite', title: typeName, type: uid, page: 1 });
+                        });
+                        $container.prepend($reg);
+                    });
+
+                    Lampa.Controller.collectionSet($container);
+                }
+            } else {
+                // Очищаємо, якщо ми не в закладках, щоб наступного разу намалювати правильно
+                $('.custom-type, .new-custom-type').remove();
             }
-        });
+        }, 500);
 
         favoritePageSvc.registerLines();
     }
