@@ -993,53 +993,47 @@
             }
         });
 
-
-          // Використовуємо інтервал для гарантованого відстеження закладок
-        var checkInterval = setInterval(function() {
-            var active = Lampa.Activity.active();
-            if (active && active.component === 'bookmarks') {
-                var $container = $('.bookmarks .scroll__body');
+        Lampa.Listener.follow('render', function (e) {
+            if (e.name === 'bookmarks') {
+                var $container = e.body.find('.scroll__body');
                 
-                // Якщо контейнер є, але кнопки ще не додані (або їх треба оновити)
-                if ($container.length && $container.find('.custom-type').length === 0) {
-                    
-                    // Додаємо кнопку +
-                    if (Lampa.Storage.get('custom_fav_show_add_button', true)) {
-                        var $add = Lampa.Template.js('register').addClass('selector new-custom-type');
-                        $add.find('.register__counter').html('<img src="./img/icons/add.svg"/>');
-                        $add.on('hover:enter', function () {
-                            Lampa.Input.edit({ title: Lampa.Lang.translate('filter_set_name'), value: '', free: true }, function (value) {
-                                if (value && value !== 'card') {
-                                    customFavorite.createType(value);
-                                    Lampa.Activity.active().activity.render(true);
-                                }
-                            });
-                        });
-                        $container.prepend($add);
-                    }
-
-                    // Додаємо папки
-                    var favorite = customFavorite.getFavorite();
-                    customFavorite.getTypesWithoutSystem(favorite).reverse().forEach(function (typeName) {
-                        var uid = favorite.customTypes[typeName];
-                        var typeList = favorite[uid] || [];
-                        
-                        var $reg = Lampa.Template.js('register').addClass('selector custom-type custom-type-' + uid);
-                        $reg.find('.register__name').text(typeName);
-                        $reg.find('.register__counter').text(typeList.length);
-                        $reg.on('hover:enter', function() {
-                            Lampa.Activity.push({ component: 'favorite', title: typeName, type: uid, page: 1 });
-                        });
-                        $container.prepend($reg);
-                    });
-
-                    Lampa.Controller.collectionSet($container);
-                }
-            } else {
-                // Очищаємо, якщо ми не в закладках, щоб наступного разу намалювати правильно
+                // Видаляємо старі кнопки
                 $('.custom-type, .new-custom-type').remove();
+
+                // Додаємо +
+                if (Lampa.Storage.get('custom_fav_show_add_button', true)) {
+                    var $add = Lampa.Template.js('register').addClass('selector new-custom-type');
+                    $add.find('.register__counter').html('<img src="./img/icons/add.svg"/>');
+                    $add.on('hover:enter', function () {
+                        Lampa.Input.edit({ title: Lampa.Lang.translate('filter_set_name'), value: '', free: true }, function (value) {
+                            if (value && value !== 'card') {
+                                customFavorite.createType(value);
+                                Lampa.Activity.active().activity.render(true);
+                            }
+                        });
+                    });
+                    $container.prepend($add);
+                }
+
+                // Додаємо папки
+                var favorite = customFavorite.getFavorite();
+                customFavorite.getTypesWithoutSystem(favorite).reverse().forEach(function (typeName) {
+                    var uid = favorite.customTypes[typeName];
+                    var typeList = favorite[uid] || [];
+                    
+                    var $reg = Lampa.Template.js('register').addClass('selector custom-type');
+                    $reg.find('.register__name').text(typeName);
+                    $reg.find('.register__counter').text(typeList.length);
+                    $reg.on('hover:enter', function() {
+                        Lampa.Activity.push({ component: 'favorite', title: typeName, type: uid, page: 1 });
+                    });
+                    
+                    $container.prepend($reg);
+                });
+
+                Lampa.Controller.collectionSet($container);
             }
-        }, 500);
+        });
 
         favoritePageSvc.registerLines();
     }
