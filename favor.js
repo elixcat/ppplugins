@@ -7,7 +7,7 @@
     var STORAGE_KEY = "custom_favorite";
     var STORAGE_SYNC_KEY = "lampac_sync_custom_favorite";
     var SETTINGS_KEY = "custom_fav_settings";
-    var PLUGIN_COMPONENT = 'custom_fav_settings';
+    var COMPONENT = 'custom_fav_settings';
 
     // Налаштування плагіна
     function getSettings() {
@@ -22,26 +22,31 @@
         Lampa.Storage.set(SETTINGS_KEY, settings);
     }
 
-    // Додаємо налаштування через API Лампи
+    // Додаємо налаштування через API Лампи (як у rezka-comment.js)
     function addSettings() {
         if (!Lampa.SettingsApi || typeof Lampa.SettingsApi.addComponent !== 'function') return;
         
-        // Додаємо компонент з параметрами
+        // Додаємо компонент
         Lampa.SettingsApi.addComponent({ 
-            component: PLUGIN_COMPONENT, 
+            component: COMPONENT, 
             name: Lampa.Lang.translate('custom_favs_settings'), 
             icon: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>' 
         });
         
-        // Додаємо параметр - перемикач
+        // Додаємо параметр як select (як у rezka-comment.js з scale)
         var hideAddButton = getSettings().hideAddButton;
+        var selectValues = {
+            'false': Lampa.Lang.translate('custom_favs_show'),
+            'true': Lampa.Lang.translate('custom_favs_hide')
+        };
+        
         Lampa.SettingsApi.addParam({ 
-            component: PLUGIN_COMPONENT, 
+            component: COMPONENT, 
             param: { 
                 name: 'custom_fav_hide_add_button', 
-                type: 'toggle', 
-                'default': false,
-                value: hideAddButton
+                type: 'select', 
+                values: selectValues,
+                'default': 'false'
             }, 
             field: { 
                 name: Lampa.Lang.translate('custom_favs_show_add'), 
@@ -49,9 +54,9 @@
             },
             onChange: function(value) {
                 var settings = getSettings();
-                settings.hideAddButton = value;
+                settings.hideAddButton = value === 'true';
                 saveSettings(settings);
-                toggleAddButton(value);
+                toggleAddButton(settings.hideAddButton);
             }
         });
     }
@@ -931,14 +936,24 @@
                 ru: 'Пользовательские папки'
             },
             custom_favs_show_add: {
-                en: 'Show add button',
-                uk: 'Показувати кнопку додавання',
-                ru: 'Показывать кнопку добавления'
+                en: 'Add button',
+                uk: 'Кнопка додавання',
+                ru: 'Кнопка добавления'
             },
             custom_favs_show_add_desc: {
                 en: 'Show/hide the button for adding new folders',
                 uk: 'Показувати/приховувати кнопку додавання нових папок',
                 ru: 'Показывать/скрывать кнопку добавления новых папок'
+            },
+            custom_favs_show: {
+                en: 'Show',
+                uk: 'Показувати',
+                ru: 'Показывать'
+            },
+            custom_favs_hide: {
+                en: 'Hide',
+                uk: 'Приховувати',
+                ru: 'Скрывать'
             }
         });
 
@@ -1117,7 +1132,7 @@
 
         favoritePageSvc.registerLines();
 
-        // Додаємо налаштування через API
+        // Додаємо налаштування через API (як у rezka-comment.js)
         addSettings();
     }
 
