@@ -1,9 +1,9 @@
 (function () {
     'use strict';
 
-    var PLUGIN_ID = 'opensubtitles_ru';
-    var PLUGIN_TITLE = 'OpenSubtitles2';
-    var DEFAULT_LANG = 'ukr';
+    var PLUGIN_ID = 'opensubtitles_ru2';
+    var PLUGIN_TITLE = 'OpenSubtitles 2';
+    var DEFAULT_LANG = 'rus';
 
     var ADDONS = [
         'https://opensubtitles-v3.strem.io'
@@ -430,7 +430,7 @@
                 if (cacheStatusElements.indexOf(description[0]) === -1) cacheStatusElements.push(description[0]);
             }
             else {
-                item.append('<div class="settings-param__descr opensub-cache-state">' + escapeHtml(text) + '</div>');
+                item.append('<div class="settings-param__descr opensub2-cache-state">' + escapeHtml(text) + '</div>');
             }
         }
         catch (e) {}
@@ -573,7 +573,7 @@
             var text = accountStatusText();
 
             if (description.length) description.text(text);
-            else item.append('<div class="settings-param__descr opensub-account-state">' + escapeHtml(text) + '</div>');
+            else item.append('<div class="settings-param__descr opensub2-account-state">' + escapeHtml(text) + '</div>');
         }
         catch (e) {}
     }
@@ -653,9 +653,6 @@
     }
 
     function isSeries(card, data) {
-        // Явные признаки фильма (TMDB / Lampa.Activity / URL ?media=movie). Они должны выигрывать
-        // у эвристики "у card.name значит сериал", иначе мы насильно тащим фильм через серийную
-        // ветку и шлём в SubDL фиктивные season=1/episode=1.
         if (card) {
             if (card.media_type === 'movie') return false;
             if (card.media_type === 'tv') return true;
@@ -686,14 +683,11 @@
         var dataSeason = parseInt((data && (data.season || data.season_number)) || 0, 10) || 0;
         var dataEpisode = parseInt((data && (data.episode || data.episode_number)) || 0, 10) || 0;
         var titleText = String((data && data.title) || '');
-        // Берём ВСЕ доступные пути одновременно — для многосерийных торрентов сезон
-        // обычно сидит в названии родительского каталога, а fname это просто "01.mkv".
         var fileSources = [data && data.fname, data && data.path, data && data.url].filter(Boolean);
         var fileText = fileSources.map(function (s) {
             try { return decodeURIComponent(String(s)); } catch (e) { return String(s); }
         }).join(' ');
         try { titleText = decodeURIComponent(titleText); } catch (e) {}
-        // Не дай резрешению вроде "1920x1080" или "1280x720" попасть в матч N×N.
         var resolutionStripped = (titleText + ' ' + fileText)
             .replace(/\b\d{3,4}x\d{3,4}\b/gi, ' ');
         var match;
@@ -714,7 +708,6 @@
             }
         }
 
-        // Сезон из текста: "Season 3", "3rd Season", "Сезон 3", "S03". И title, и весь путь.
         if (!fileSeason) {
             var seasonText = titleText + ' ' + fileText;
             match = seasonText.match(/(?:season|сезон)\s*(\d{1,2})\b/i)
@@ -726,7 +719,6 @@
             }
         }
 
-        // Эпизод из имени файла: "01.mkv", "[Group] 01 [tag].mkv", "Title - 01.mkv", "Title 01v2.mkv".
         if (!fileEpisode) {
             var basename = fileText.replace(/^.*[\/\\]/, '').replace(/\.[a-z0-9]{2,4}$/i, '');
             var stripped = basename.replace(/\[[^\]]*\]/g, ' ').replace(/\([^)]*\)/g, ' ');
@@ -737,13 +729,8 @@
             }
         }
 
-        // Эпизод нашли, а сезон нет — почти всегда сезон 1 (типично для аниме первого сезона).
         if (fileEpisode && !fileSeason) fileSeason = 1;
 
-        // Приоритет: если из имени файла достали что-то осмысленное — используем именно его.
-        // Lampa для movie-карточек прокидывает data.season=1, data.episode=1 как дефолты,
-        // и они полностью перекрывают реальные значения из торрента-сериала. Поэтому
-        // file-extracted данные имеют приоритет.
         if (fileSeason || fileEpisode) {
             return {
                 season: fileSeason || dataSeason || 0,
@@ -766,8 +753,6 @@
         base = base.replace(/\b(720p|1080p|2160p|4k|bdrip|bluray|webrip|webdl|hdtv|hevc|h264|h265|x264|x265|10bit|flac|aac|ac3|dts|multi|dual|dub|sub|raw|ova|oad|movie|complete)\b.*/gi, '');
         base = base.replace(/\b\d{3,4}x\d{3,4}\b.*/i, '');
         base = base.replace(/\b(?:19|20)\d{2}\b/g, '');
-        // Хвостовой "3rd" / "2nd" / "1st" / "4th" без "Season" — обычно остаток от
-        // обрезанного "3rd Season". Срезаем, если оно последнее слово.
         base = base.replace(/\s+\d{1,2}(?:st|nd|rd|th)\s*$/i, '');
         base = base.replace(/[._]/g, ' ').replace(/\s+/g, ' ').trim();
         base = base.replace(/^[-:\s]+|[-:\s]+$/g, '');
@@ -775,22 +760,15 @@
         return base;
     }
 
-    // Достаём очищенное имя шоу из имени файла / торрента / папки. Помогает в кейсах,
-    // когда Lampa сматчила контент с не той карточкой TMDB (типичная история для аниме):
-    // имя файла либо родительский каталог торрента содержит правильное имя шоу.
     function extractShowFromFilename(data) {
         if (!data) return '';
-        // Порядок: файл/путь/url раньше title.
         var sources = [data.fname, data.path, data.url, data.title].filter(Boolean);
         for (var i = 0; i < sources.length; i++) {
             var raw = String(sources[i] || '');
             try { raw = decodeURIComponent(raw); } catch (e) {}
-            // Разбиваем на сегменты пути и идём от файла к корню — обычно имя шоу в
-            // родительском каталоге, а файл это просто "01.mkv".
             var segments = raw.split(/[\/\\]/).filter(Boolean);
             for (var j = segments.length - 1; j >= 0; j--) {
                 var seg = segments[j];
-                // На последнем сегменте отрезаем расширение.
                 if (j === segments.length - 1) seg = seg.replace(/\.[a-z0-9]{2,4}$/i, '');
                 var cleaned = cleanShowName(seg);
                 if (cleaned) return cleaned;
@@ -865,7 +843,6 @@
         return 'https://rest.opensubtitles.org/search/imdbid-' + imdbDigits + '/sublanguageid-' + langCode;
     }
 
-    // REST OpenSubtitles2 по IMDb БЕЗ season/episode — отдаёт ВСЕ субтитры показа сразу.
     function buildRestUrlByImdb(imdb, langCode) {
         var digits = String(imdb || '').replace(/^tt/i, '').replace(/\D/g, '');
         if (!digits) return '';
@@ -909,9 +886,6 @@
                 url = item.SubDownloadLink || '';
             }
             else {
-                // rest.opensubtitles.org отдаёт .gz, который Lampa.Reguest читает как мусор и
-                // парсер выдаёт "Файл субтитров пустой или не распознан". Поэтому всегда тянем
-                // через Stremio CDN — там тот же файл, распакованный и нормализованный в UTF-8.
                 url = 'https://subs5.strem.io/en/download/subencoding-stremio-utf8/src-api/file/' + item.IDSubtitleFile + '.srt';
             }
             if (!url) continue;
@@ -923,19 +897,14 @@
                 m: 'i',
                 g: String(parseInt(item.SubDownloadsCnt, 10) || 0),
                 _source: source,
-                // Имя файла и release-метка из SubDL — чтобы пикер мог их показать.
                 release: String(item.MovieReleaseName || '').trim(),
                 filename: String(item.MovieName || '').trim(),
-                // IMDb который сервер достал через title-резолв (у SubDL результатов).
                 resolvedImdb: String(item._resolved_imdb || '').trim()
             });
         }
         return mapped;
     }
 
-    // Stremio-аддон и REST OpenSubtitles2 возвращают один и тот же саб с разными URL
-    // (например `subs5.strem.io/.../file/123456.srt` vs `subs7.strem.io/.../file/123456.srt`).
-    // Чтобы дедуп их склеил, ключ берём по числовому IDSubtitleFile из URL/id.
     function subtitleDedupeKey(item, url) {
         if (item && item._source === 'subdl') return 'subdl|' + url;
         var fromUrl = String(url || '').match(/\/(?:file|sub|subtitles)\/(\d{3,})/i);
@@ -954,15 +923,12 @@
         searchState = 'searching';
         installToPanel();
 
-
         loadImdbIfNeeded(card, data, function (imdb) {
             if (playerId !== activePlayerId) return;
 
             var request = stremioRequestId(card, data, imdb);
 
             if (!request) {
-                // Без IMDb Stremio-аддоны и REST OpenSubtitles2 не работают, но SubDL умеет
-                // искать по tmdb_id/названию. Дёрнем его напрямую, если есть что искать.
                 var hasFallbackId = card && (card.id || card.name || card.original_name || card.title || card.original_title);
                 var auto = parseEpisode(data || {});
                 var hasEpisode = (manualOverride && manualOverride.season && manualOverride.episode) || (auto.season && auto.episode);
@@ -994,9 +960,6 @@
 
             var bases = addonBases();
             var lang = selectedLanguage();
-            // REST OS принимает один язык за раз. Дёргаем И целевой, И исходный,
-            // чтобы у OS было откуда давать ИИ-кандидатов, когда Stremio-аддон
-            // молчит/недоступен. Иначе единственный источник на перевод — SubDL.
             var sourceLang = effectiveSourceLanguage(originalLanguageCode(card));
             var restLangs = [lang.code];
             if (sourceLang && sourceLang !== lang.code) restLangs.push(sourceLang);
@@ -1106,12 +1069,10 @@
         var episode = parts[2] || '';
 
         if (titleSearch) {
-            // Title-search режим: показываем ВСЕ сабы по названию, без фильтра по сезону/серии.
             season = '';
             episode = '';
         }
         else if (!season || !episode) {
-            // Обычный режим: подтягиваем season/episode из override или имени файла.
             if (manualOverride) {
                 season = season || manualOverride.season || '';
                 episode = episode || manualOverride.episode || '';
@@ -1143,8 +1104,6 @@
             return true;
         });
 
-        // Передаём все идентификаторы, которые есть. Сервер выберет imdb_id → tmdb_id → query
-        // в этом порядке, и сам автоматически попробует tmdb_id если imdb_id ничего не вернул.
         var qs = 'languages=' + encodeURIComponent(langs.join(','));
         if (imdbId && !titleSearch) qs += '&imdb_id=' + encodeURIComponent(imdbId);
         if (tmdbId && !titleSearch) qs += '&tmdb_id=' + encodeURIComponent(tmdbId);
@@ -1262,7 +1221,6 @@
     }
 
     function mapStremioResults(results) {
-        // В title-search режиме показываем все результаты, не режем limit'ом.
         var limit = titleSearchInProgress ? 1000 : (parseInt(storage(PLUGIN_ID + '_limit', '15'), 10) || 15);
         var lang = selectedLanguage();
         var seen = {};
@@ -1387,13 +1345,10 @@
 
         mapped.sort(function (a, b) {
             if (a.rank !== b.rank) return a.rank - b.rank;
-            // При равном языковом ранге предпочитаем OpenSubtitles2 над SubDL: пользователь
-            // явно просил OS как основной источник, SubDL только когда у OS нечего взять.
             if (a.origin !== b.origin) return a.origin === 'subdl' ? 1 : -1;
             return b.score - a.score;
         });
 
-        // В title-search режиме показываем все кандидаты, в обычном — только лучший.
         var keepAll = titleSearchInProgress;
         return keepAll ? mapped : mapped.slice(0, 1);
     }
@@ -1548,17 +1503,17 @@
         });
     }
 
-    var SUBS_OFF_BODY_CLASS = 'opensubtitles-ru-subs-off';
+    var SUBS_OFF_BODY_CLASS = 'opensubtitles-ru2-subs-off';
 
     function ensureSubsOffStyles() {
         if (typeof document === 'undefined' || !document.head) return;
-        if (document.getElementById('opensubtitles-ru-subs-off-styles')) return;
+        if (document.getElementById('opensubtitles-ru2-subs-off-styles')) return;
 
         var hideRule = 'display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;';
         var prefix = 'body.' + SUBS_OFF_BODY_CLASS + ' ';
 
         var style = document.createElement('style');
-        style.id = 'opensubtitles-ru-subs-off-styles';
+        style.id = 'opensubtitles-ru2-subs-off-styles';
         style.textContent =
             prefix + '.subtitles,' +
             prefix + '.player-subtitles,' +
@@ -1968,13 +1923,6 @@
         return 'player_panel';
     }
 
-    // Строим запрос для title-search: ОРИГИНАЛЬНОЕ название (без года, год отдельно).
-    // Приоритет:
-    //  1. Имя шоу из имени файла/торрента (часто Latin romaji, идеально для SubDL/OS).
-    //  2. card.original_title / card.original_name из TMDB.
-    //  3. card.title / card.name (локализованное — последний фоллбек).
-    // Среди всех кандидатов предпочитаем тот, что содержит латиницу (SubDL/OS их индексируют
-    // лучше, чем кириллицу/иероглифы).
     function buildTitleSearchQuery(card, data) {
         var candidates = [
             extractShowFromFilename(data),
@@ -1992,9 +1940,6 @@
         return candidates[0];
     }
 
-    // Год для title-search передаём отдельным параметром. SubDL принимает `year` как
-    // подсказку (не строгий фильтр), это улучшает релевантность без риска отбить
-    // правильный результат при mismatched-карточке.
     function buildTitleSearchYear(card, data) {
         var fileText = String((data && (data.fname || data.path || data.url || data.title)) || '');
         try { fileText = decodeURIComponent(fileText); } catch (e) {}
@@ -2043,12 +1988,10 @@
             openTitleResultsSelect(query, combined, card);
         }
 
-        // Шаг 1: SubDL по названию — заодно зарезолвит правильный IMDb шоу.
         fetchFromSubdl(card, null, function (subdlItems) {
             if (subdlItems && subdlItems.length) raw = raw.concat(subdlItems);
             logDebug('title-search SubDL returned', (subdlItems || []).length, 'items');
 
-            // Шаг 2: REST OpenSubtitles2 по IMDb (от SubDL или из карточки) — без season/episode.
             var imdb = '';
             for (var i = 0; i < (subdlItems || []).length; i++) {
                 if (subdlItems[i] && subdlItems[i].resolvedImdb) { imdb = subdlItems[i].resolvedImdb; break; }
@@ -2057,12 +2000,6 @@
 
             if (!imdb) { finalize(); return; }
 
-            // Stremio-аддон OS использует современный API OpenSubtitles2 и для свежих
-            // сериалов (Invincible S04 и т.п.) почти всегда имеет сабы, в отличие от
-            // legacy rest.opensubtitles.org. Без него title-search не получает ИИ-кандидатов
-            // от OS на новом контенте и юзер видит только SubDL.
-            // manualOverride сейчас type='titleSearch', stremioRequestId это спутает, поэтому
-            // временно скрываем его, чтобы получить нормальный series/imdb:S:E request.
             var savedOverride = manualOverride;
             manualOverride = null;
             var stremioReq;
@@ -2097,8 +2034,6 @@
                 });
             }
 
-            // REST OS как fallback — может пригодиться для старого контента, где Stremio-аддон
-            // молчит.
             langsToFetch.forEach(function (langCode) {
                 var url = buildRestUrlByImdb(imdb, langCode);
                 if (!url) { if (--pending === 0) finalize(); return; }
@@ -2119,9 +2054,6 @@
         });
     }
 
-    // Lampa.Select с результатами title-search: пользователь видит все варианты с
-    // именами файлов и сам выбирает подходящий. Выбранный саб попадает в основной
-    // пикер и активируется тем же путём, что обычный пункт.
     function openTitleResultsSelect(query, results, card) {
         if (!Lampa.Select || !Lampa.Select.show) return;
 
@@ -2147,7 +2079,6 @@
                 returnToController(prevController);
                 if (!selected) return;
 
-                // Поместим выбранный саб в основной пикер, чтобы он отображался как активный.
                 if (selected._raw && selected._raw.translated) {
                     translatedSubs = [selected._raw];
                 }
@@ -2188,13 +2119,10 @@
         return item && item.origin === 'subdl' ? 'SubDL' : PLUGIN_TITLE;
     }
 
-    // Имя саб-файла из release/filename — то, что пользователь видит на сайте SubDL/OS.
-    // Помогает выбрать правильный саб когда title-search возвращает много вариантов.
     function subFileLabel(item) {
         if (!item) return '';
         var release = String(item.release || '').trim();
         var filename = String(item.filename || '').trim();
-        // Предпочитаем имя файла, если оно содержит SxxExx или похожий маркер.
         if (filename && /s\d{1,2}\s*e\d{1,3}/i.test(filename)) return filename;
         if (release) return release;
         if (filename) return filename;
@@ -2343,7 +2271,7 @@
 
     function hookPanelSetSubs() {
         if (!Lampa.PlayerPanel || !Lampa.PlayerPanel.setSubs) return;
-        if (Lampa.PlayerPanel.setSubs._opensub_version === PLUGIN_VERSION) return;
+        if (Lampa.PlayerPanel.setSubs._opensub2_version === PLUGIN_VERSION) return;
 
         var original = Lampa.PlayerPanel.setSubs;
 
@@ -2369,7 +2297,7 @@
             return result;
         };
 
-        wrapper._opensub_version = PLUGIN_VERSION;
+        wrapper._opensub2_version = PLUGIN_VERSION;
         Lampa.PlayerPanel.setSubs = wrapper;
 
         logDebug('hookPanelSetSubs: installed', PLUGIN_VERSION);
@@ -2380,7 +2308,7 @@
             logDebug('hookVideoSubsview: Lampa.PlayerVideo.subsview not available');
             return;
         }
-        if (Lampa.PlayerVideo.subsview._opensub_version === PLUGIN_VERSION) return;
+        if (Lampa.PlayerVideo.subsview._opensub2_version === PLUGIN_VERSION) return;
 
         var original = Lampa.PlayerVideo.subsview;
 
@@ -2422,7 +2350,7 @@
             return original.call(this, status);
         };
 
-        wrapper._opensub_version = PLUGIN_VERSION;
+        wrapper._opensub2_version = PLUGIN_VERSION;
         Lampa.PlayerVideo.subsview = wrapper;
 
         logDebug('hookVideoSubsview: installed', PLUGIN_VERSION);
@@ -2435,7 +2363,7 @@
         }
 
         var bus = Lampa.PlayerPanel.listener;
-        var prev = Lampa.PlayerPanel._opensub_subsview_listener;
+        var prev = Lampa.PlayerPanel._opensub2_subsview_listener;
 
         if (prev && typeof bus.remove === 'function') {
             try { bus.remove('subsview', prev); }
@@ -2477,8 +2405,8 @@
         };
 
         bus.follow('subsview', listenerFn);
-        Lampa.PlayerPanel._opensub_subsview_listener = listenerFn;
-        Lampa.PlayerPanel._opensub_subsview_version = PLUGIN_VERSION;
+        Lampa.PlayerPanel._opensub2_subsview_listener = listenerFn;
+        Lampa.PlayerPanel._opensub2_subsview_version = PLUGIN_VERSION;
 
         logDebug('hookSubsviewSignal: installed');
     }
@@ -2557,9 +2485,9 @@
 
     function hookPlayerClose() {
         if (!Lampa.Player || typeof Lampa.Player.close !== 'function') return;
-        if (Lampa.Player.close._opensub_close_hook === PLUGIN_VERSION) return;
+        if (Lampa.Player.close._opensub2_close_hook === PLUGIN_VERSION) return;
 
-        var original = Lampa.Player.close._opensub_close_original || Lampa.Player.close;
+        var original = Lampa.Player.close._opensub2_close_original || Lampa.Player.close;
 
         var wrapper = function () {
             try { beginPlayerClose(); }
@@ -2567,8 +2495,8 @@
             return original.apply(this, arguments);
         };
 
-        wrapper._opensub_close_hook = PLUGIN_VERSION;
-        wrapper._opensub_close_original = original;
+        wrapper._opensub2_close_hook = PLUGIN_VERSION;
+        wrapper._opensub2_close_original = original;
         Lampa.Player.close = wrapper;
 
         logDebug('hookPlayerClose: installed');
@@ -2576,9 +2504,9 @@
 
     function hookSubtitleDelayPicker() {
         if (!Lampa.Select || typeof Lampa.Select.show !== 'function') return;
-        if (Lampa.Select.show._opensub_delay_hook === PLUGIN_VERSION) return;
+        if (Lampa.Select.show._opensub2_delay_hook === PLUGIN_VERSION) return;
 
-        var original = Lampa.Select.show._opensub_delay_original || Lampa.Select.show;
+        var original = Lampa.Select.show._opensub2_delay_original || Lampa.Select.show;
 
         var wrapper = function (params) {
             try { params = patchSubtitleDelayMenu(params); }
@@ -2586,8 +2514,8 @@
             return original.call(this, params);
         };
 
-        wrapper._opensub_delay_hook = PLUGIN_VERSION;
-        wrapper._opensub_delay_original = original;
+        wrapper._opensub2_delay_hook = PLUGIN_VERSION;
+        wrapper._opensub2_delay_original = original;
         Lampa.Select.show = wrapper;
 
         logDebug('hookSubtitleDelayPicker: installed');
@@ -2598,9 +2526,9 @@
             logDebug('hookAndroidOpenPlayer: Lampa.Android.openPlayer not available');
             return;
         }
-        if (Lampa.Android.openPlayer._opensub_version === PLUGIN_VERSION) return;
+        if (Lampa.Android.openPlayer._opensub2_version === PLUGIN_VERSION) return;
 
-        var original = Lampa.Android.openPlayer._opensub_original || Lampa.Android.openPlayer;
+        var original = Lampa.Android.openPlayer._opensub2_original || Lampa.Android.openPlayer;
 
         var wrapper = function (link, data) {
             var self = this;
@@ -2634,8 +2562,8 @@
             });
         };
 
-        wrapper._opensub_version = PLUGIN_VERSION;
-        wrapper._opensub_original = original;
+        wrapper._opensub2_version = PLUGIN_VERSION;
+        wrapper._opensub2_original = original;
         Lampa.Android.openPlayer = wrapper;
 
         logDebug('hookAndroidOpenPlayer: installed', PLUGIN_VERSION);
@@ -2684,7 +2612,6 @@
             if (status) mixed.push(status);
         }
 
-        // Кнопка "Поиск по названию" — нужна и для фильмов, и для сериалов.
         mixed.push(searchItem());
 
         logDebug('install panel: native=' + base.length + ' stremio=' + stremioSubs.length + ' translated=' + translatedSubs.length + ' state=' + searchState);
@@ -2717,15 +2644,15 @@
 
     function ensureTranslationStatusStyles() {
         if (typeof document === 'undefined' || !document.createElement || !document.head) return;
-        if (document.getElementById('opensubtitles-translation-status-styles')) return;
+        if (document.getElementById('opensubtitles2-translation-status-styles')) return;
 
         var style = document.createElement('style');
-        style.id = 'opensubtitles-translation-status-styles';
+        style.id = 'opensubtitles2-translation-status-styles';
         style.textContent =
             '@keyframes opensubtitles-spin{to{transform:rotate(360deg)}}' +
             '@keyframes opensubtitles-status-fade{from{opacity:0;transform:translate(-50%,-50%) scale(0.96)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}' +
             '@keyframes opensubtitles-pulse{0%,100%{opacity:0.55}50%{opacity:1}}' +
-            '.opensubtitles-translation-status{' +
+            '.opensubtitles2-translation-status{' +
                 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);' +
                 'z-index:2147483647;min-width:18em;max-width:84vw;' +
                 'padding:1.6em 1.8em;border-radius:0.7em;' +
@@ -2735,14 +2662,14 @@
                 'pointer-events:none;' +
                 'animation:opensubtitles-status-fade 0.18s ease-out;' +
             '}' +
-            '.opensubtitles-translation-status__spinner{' +
+            '.opensubtitles2-translation-status__spinner{' +
                 'display:block;margin:0 auto 0.85em;width:2.2em;height:2.2em;' +
                 'border-radius:50%;' +
                 'border:0.22em solid rgba(255,255,255,0.18);' +
                 'border-top-color:#7cc4ff;' +
                 'animation:opensubtitles-spin 0.85s linear infinite;' +
             '}' +
-            '.opensubtitles-translation-status__text{display:block;animation:opensubtitles-pulse 2.2s ease-in-out infinite}';
+            '.opensubtitles2-translation-status__text{display:block;animation:opensubtitles-pulse 2.2s ease-in-out infinite}';
         document.head.appendChild(style);
     }
 
@@ -2753,14 +2680,14 @@
 
         if (!translationStatusNode) {
             translationStatusNode = document.createElement('div');
-            translationStatusNode.className = 'opensubtitles-translation-status';
+            translationStatusNode.className = 'opensubtitles2-translation-status';
 
             var spinner = document.createElement('div');
-            spinner.className = 'opensubtitles-translation-status__spinner';
+            spinner.className = 'opensubtitles2-translation-status__spinner';
             translationStatusNode.appendChild(spinner);
 
             translationStatusTextNode = document.createElement('span');
-            translationStatusTextNode.className = 'opensubtitles-translation-status__text';
+            translationStatusTextNode.className = 'opensubtitles2-translation-status__text';
             translationStatusNode.appendChild(translationStatusTextNode);
             document.body.appendChild(translationStatusNode);
         }
@@ -3129,7 +3056,7 @@
                 return;
             }
 
-            html = $('<div class="account-modal-split opensub-service-connect">' +
+            html = $('<div class="account-modal-split opensub2-service-connect">' +
                 '<div class="account-modal-split__qr">' +
                     '<div class="account-modal-split__qr-code"></div>' +
                     '<div class="account-modal-split__qr-text">Сканируйте QR-код: код привязки уже внутри</div>' +
@@ -3138,7 +3065,7 @@
                     '<div class="account-modal-split__title">ИИ перевод субтитров</div>' +
                     '<div class="account-modal-split__text">' +
                         '<div style="font-size:2.2em;font-weight:700;letter-spacing:.12em;margin:.6em 0">' + escapeHtml(code) + '</div>' +
-                        '<p><b>Баланс:</b> <span class="opensub-service-balance-value">' + escapeHtml(accountStatusText()) + '</span></p>' +
+                        '<p><b>Баланс:</b> <span class="opensub2-service-balance-value">' + escapeHtml(accountStatusText()) + '</span></p>' +
                         '<p>Бот ' + escapeHtml(botName) + ' привязывает Lampa к вашему балансу, показывает кредиты и помогает купить переводы после бесплатного лимита.</p>' +
                         '<p>Без привязки доступны 3 бесплатных ИИ-перевода на этом устройстве. После привязки переводы списываются с баланса кредитов.</p>' +
                         '<p>Откройте бота и отправьте код выше или просто отсканируйте QR-код.</p>' +
@@ -3149,7 +3076,7 @@
 
             function updateBalanceLine(account) {
                 if (account) saveAccountState(account);
-                html.find('.opensub-service-balance-value').text(accountStatusText());
+                html.find('.opensub2-service-balance-value').text(accountStatusText());
             }
 
             if (Lampa.Utils && Lampa.Utils.qrcode) {
@@ -3239,9 +3166,6 @@
         var series = isSeries(card, lastPlayerData);
         var episode = series ? parseEpisode(lastPlayerData || {}) : { season: 0, episode: 0 };
 
-        // Карточка может быть «голой» (торрент без TMDB, прямое открытие файла) — там нет ни
-        // title/name, ни original_title. Подставляем имя файла, чтобы бот не показывал
-        // «Без названия» в уведомлении админов.
         var title = (card && (card.title || card.name))
             || (lastPlayerData && lastPlayerData.title)
             || (card && (card.original_title || card.original_name))
@@ -4039,19 +3963,19 @@
 
         if (!origTitle || origTitle === displayTitle) return;
 
-        body.find('.opensub-original-title-row').remove();
+        body.find('.opensub2-original-title-row').remove();
 
         var head = body.find('.full-start-new__head').first();
         if (!head.length) return;
 
-        var span = $('<span class="opensub-original-title-row"></span>').text(origTitle + ', ');
+        var span = $('<span class="opensub2-original-title-row"></span>').text(origTitle + ', ');
         head.prepend(span);
         head.removeClass('hide');
     }
 
     if (Lampa.Listener && typeof Lampa.Listener.follow === 'function') {
-        if (Lampa.Listener._opensub_full_listener) {
-            try { Lampa.Listener.remove('full', Lampa.Listener._opensub_full_listener); }
+        if (Lampa.Listener._opensub2_full_listener) {
+            try { Lampa.Listener.remove('full', Lampa.Listener._opensub2_full_listener); }
             catch (e) {}
         }
 
@@ -4062,7 +3986,7 @@
         };
 
         Lampa.Listener.follow('full', fullListener);
-        Lampa.Listener._opensub_full_listener = fullListener;
+        Lampa.Listener._opensub2_full_listener = fullListener;
     }
 
     loadTranslationCacheFromStorage();
@@ -4088,7 +4012,7 @@
 
     if (Lampa.PlayerVideo && Lampa.PlayerVideo.listener) {
         var bus = Lampa.PlayerVideo.listener;
-        var prev = Lampa.PlayerVideo._opensub_subs_listener;
+        var prev = Lampa.PlayerVideo._opensub2_subs_listener;
 
         if (prev && typeof bus.remove === 'function') {
             try { bus.remove('subs', prev); } catch (e) {}
@@ -4111,6 +4035,6 @@
         };
 
         bus.follow('subs', subsListener);
-        Lampa.PlayerVideo._opensub_subs_listener = subsListener;
+        Lampa.PlayerVideo._opensub2_subs_listener = subsListener;
     }
 })();
