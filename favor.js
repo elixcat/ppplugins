@@ -987,7 +987,7 @@
             '.icon--star svg { position: absolute; height: 60%; width: 60%; top: 50%; left: 50%; transform: translate(-50%, -50%) }' +
             '.new-custom-type .register__counter { display:flex; justify-content:center; align-items:center }' +
             '.new-custom-type .register__counter img { height:2.2em; padding:0.4em; }' +
-            '.register.custom-type { background-image: url("https://levende.github.io/lampa-plugins/assets/tap.svg"); background-repeat: no-repeat; background-position: 90% 90%; background-size: 20%; }'
+            '.register.custom-type { background-image: url("https://elixcat.github.io/ppplugins/tap.svg"); background-repeat: no-repeat; background-position: 90% 90%; background-size: 20%; }'
         ).appendTo('head');
 
         Lampa.Listener.follow('full', function (event) {
