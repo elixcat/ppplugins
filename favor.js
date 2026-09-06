@@ -6,69 +6,6 @@
     var HOST = window.location.origin;
     var STORAGE_KEY = "custom_favorite";
     var STORAGE_SYNC_KEY = "lampac_sync_custom_favorite";
-    var SETTINGS_KEY = "custom_fav_settings";
-    var COMPONENT = 'custom_fav_settings';
-
-    // Налаштування плагіна
-    function getSettings() {
-        var settings = Lampa.Storage.get(SETTINGS_KEY, {});
-        if (typeof settings.hideAddButton === 'undefined') {
-            settings.hideAddButton = false;
-        }
-        return settings;
-    }
-
-    function saveSettings(settings) {
-        Lampa.Storage.set(SETTINGS_KEY, settings);
-    }
-
-    // Додаємо налаштування через API Лампи (як у rezka-comment.js)
-    function addSettings() {
-        if (!Lampa.SettingsApi || typeof Lampa.SettingsApi.addComponent !== 'function') return;
-        
-        // Додаємо компонент
-        Lampa.SettingsApi.addComponent({ 
-            component: COMPONENT, 
-            name: Lampa.Lang.translate('custom_favs_settings'), 
-            icon: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>' 
-        });
-        
-        // Додаємо параметр як select (як у rezka-comment.js з scale)
-        var hideAddButton = getSettings().hideAddButton;
-        var selectValues = {
-            'false': Lampa.Lang.translate('custom_favs_show'),
-            'true': Lampa.Lang.translate('custom_favs_hide')
-        };
-        
-        Lampa.SettingsApi.addParam({ 
-            component: COMPONENT, 
-            param: { 
-                name: 'custom_fav_hide_add_button', 
-                type: 'select', 
-                values: selectValues,
-                'default': 'false'
-            }, 
-            field: { 
-                name: Lampa.Lang.translate('custom_favs_show_add'), 
-                description: Lampa.Lang.translate('custom_favs_show_add_desc') 
-            },
-            onChange: function(value) {
-                var settings = getSettings();
-                settings.hideAddButton = value === 'true';
-                saveSettings(settings);
-                toggleAddButton(settings.hideAddButton);
-            }
-        });
-    }
-
-    function toggleAddButton(hide) {
-        var $addButton = $('.new-custom-type');
-        if (hide) {
-            $addButton.hide();
-        } else {
-            $addButton.show();
-        }
-    }
 
     function CustomFavoriteFolder(data) {
         var params = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
@@ -671,11 +608,6 @@
 
     FavoritePageService.prototype.renderAddButton = function () {
         var self = this;
-        var settings = getSettings();
-
-        if (settings.hideAddButton) {
-            return;
-        }
 
         var $register = Lampa.Template.js('register').addClass('selector').addClass('new-custom-type');
         $register.find('.register__counter').html('<img src="./img/icons/add.svg"/>');
@@ -778,11 +710,11 @@
                             results: lineItems,
                             type: typeUid,
                             total_pages: typeCards.length > 20 ? Math.ceil(typeCards.length / 20) : 1,
-                            icon_svg: Lampa.Template.string('custom-fav-icon-svg'),
+                            icon_svg: Lampa.Template.string('custom-fav-icon-svg'),  
                             icon_bgcolor: '#fff',
                             icon_color: '#fd4518',
                             params: {
-                                module: Lampa.Maker.module('Line').toggle(Lampa.Maker.module('Line').MASK.base, 'Icon', 'Event'),
+                                module: Lampa.Maker.module('Line').toggle(Lampa.Maker.module('Line').MASK.base, 'Icon', 'Event'),  
                                 emit: {
                                     onMore: function () {
                                         Lampa.Activity.push({
@@ -913,50 +845,6 @@
 
         window.custom_favorites = true;
 
-        // Додаємо переклади
-        Lampa.Lang.add({
-            rename: {
-                en: 'Rename',
-                uk: 'Змінити назву',
-                ru: 'Изменить имя'
-            },
-            invalid_name: {
-                en: 'Invalid name',
-                uk: 'Некоректна назва',
-                ru: 'Некорректное имя'
-            },
-            custom_favs: {
-                en: 'Custom bookmarks',
-                uk: 'Користувацькі закладки',
-                ru: 'Пользовательские закладки'
-            },
-            custom_favs_settings: {
-                en: 'Custom folders',
-                uk: 'Користувацькі папки',
-                ru: 'Пользовательские папки'
-            },
-            custom_favs_show_add: {
-                en: 'Button «New Folder»',
-                uk: 'Кнопка «Нова Папка»',
-                ru: 'Кнопка «Новая Папка»'
-            },
-            custom_favs_show_add_desc: {
-                en: 'Show/hide the button for adding new folders',
-                uk: 'Показувати/приховувати кнопку додавання нових папок',
-                ru: 'Показывать/скрывать кнопку добавления новых папок'
-            },
-            custom_favs_show: {
-                en: 'Show',
-                uk: 'Показувати',
-                ru: 'Показывать'
-            },
-            custom_favs_hide: {
-                en: 'Hide',
-                uk: 'Приховувати',
-                ru: 'Скрывать'
-            }
-        });
-
         var originalProfileWaiter = window.__profile_extra_waiter;
 
         window.__profile_extra_waiter = function () {
@@ -1072,6 +960,24 @@
             return favoriteGet.apply(this, arguments);
         };
 
+        Lampa.Lang.add({
+            rename: {
+                en: 'Rename',
+                uk: 'Змінити ім’я',
+                ru: 'Изменить имя'
+            },
+            invalid_name: {
+                en: 'Invalid name',
+                uk: 'Некоректне ім’я',
+                ru: 'Некорректное имя'
+            },
+            custom_favs: {
+                en: 'Custom bookmarks',
+                uk: 'Користувацькі закладки',
+                ru: 'Пользовательские закладки'
+            }
+        });
+
         var svgIcon = '<svg width="24" height="23" viewBox="0 0 24 23" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15.6162 7.10981L15.8464 7.55198L16.3381 7.63428L22.2841 8.62965C22.8678 8.72736 23.0999 9.44167 22.6851 9.86381L18.4598 14.1641L18.1104 14.5196L18.184 15.0127L19.0748 20.9752C19.1622 21.5606 18.5546 22.002 18.025 21.738L12.6295 19.0483L12.1833 18.8259L11.7372 19.0483L6.34171 21.738C5.81206 22.002 5.20443 21.5606 5.29187 20.9752L6.18264 15.0127L6.25629 14.5196L5.9069 14.1641L1.68155 9.86381C1.26677 9.44167 1.49886 8.72736 2.08255 8.62965L8.02855 7.63428L8.52022 7.55198L8.75043 7.10981L11.5345 1.76241C11.8078 1.23748 12.5589 1.23748 12.8322 1.76241L15.6162 7.10981Z" stroke="currentColor" stroke-width="2.2"></path></svg>';
         Lampa.Template.add('custom-fav-icon-svg', svgIcon);
         Lampa.Template.add('custom-fav-icon', '<div class="card__icon icon--star">' + svgIcon + '</div>');
@@ -1081,7 +987,7 @@
             '.icon--star svg { position: absolute; height: 60%; width: 60%; top: 50%; left: 50%; transform: translate(-50%, -50%) }' +
             '.new-custom-type .register__counter { display:flex; justify-content:center; align-items:center }' +
             '.new-custom-type .register__counter img { height:2.2em; padding:0.4em; }' +
-            '.register.custom-type { background-image: url("https://elixcat.github.io/ppplugins/tap.svg"); background-repeat: no-repeat; background-position: 90% 90%; background-size: 20%; }'
+            '.register.custom-type { background-image: url("https://levende.github.io/lampa-plugins/assets/tap.svg"); background-repeat: no-repeat; background-position: 90% 90%; background-size: 20%; }'
         ).appendTo('head');
 
         Lampa.Listener.follow('full', function (event) {
@@ -1103,8 +1009,6 @@
 
             if (Lampa.Activity.active().component === 'bookmarks') {
                 if ($('.new-custom-type').length !== 0) {
-                    var settings = getSettings();
-                    toggleAddButton(settings.hideAddButton);
                     return;
                 }
 
@@ -1123,17 +1027,11 @@
                     });
                 });
 
-                var settings = getSettings();
-                toggleAddButton(settings.hideAddButton);
-
                 Lampa.Activity.active().activity.toggle();
             }
         });
 
         favoritePageSvc.registerLines();
-
-        // Додаємо налаштування через API (як у rezka-comment.js)
-        addSettings();
     }
 
     if (window.appready) {
