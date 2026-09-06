@@ -993,7 +993,7 @@
             }
         });
 
-        Lampa.Listener.follow('render', function (event) {
+
           // Використовуємо інтервал для гарантованого відстеження закладок
         var checkInterval = setInterval(function() {
             var active = Lampa.Activity.active();
