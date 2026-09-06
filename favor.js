@@ -1037,34 +1037,25 @@
             }
         });
 
-        Lampa.Storage.listener.follow('change', function (event) {
-            if (event.name !== 'activity') {
-                return;
-            }
+        Lampa.Listener.follow('render', function (event) {
+        if (event.name === 'bookmarks') {
+            event.body.find('.custom-type, .new-custom-type').remove();
 
-            if (Lampa.Activity.active().component === 'bookmarks') {
-                if ($('.new-custom-type').length !== 0) {
-                    return;
-                }
+            favoritePageSvc.renderAddButton();
 
-                favoritePageSvc.renderAddButton();
-                var favorite = customFavorite.getFavorite();
+            var favorite = customFavorite.getFavorite();
+            customFavorite.getTypesWithoutSystem(favorite).reverse().forEach(function (typeName) {
+                var typeUid = favorite.customTypes[typeName];
+                var typeList = favorite[typeUid] || [];
 
-                customFavorite.getTypesWithoutSystem(favorite).reverse().forEach(function (typeName) {
-                    var typeUid = favorite.customTypes[typeName];
-                    var typeList = favorite[typeUid] || [];
-                    var typeCounter = typeList.length;
-
-                    favoritePageSvc.renderCustomFavoriteButton({
-                        name: typeName,
-                        uid: typeUid,
-                        counter: typeCounter
-                    });
+                favoritePageSvc.renderCustomFavoriteButton({
+                    name: typeName,
+                    uid: typeUid,
+                    counter: typeList.length
                 });
-
-                Lampa.Activity.active().activity.toggle();
-            }
-        });
+            });
+        }
+    });
 
         favoritePageSvc.registerLines();
     }
