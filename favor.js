@@ -936,9 +936,9 @@
                 ru: 'Пользовательские папки'
             },
             custom_favs_show_add: {
-                en: 'Button &quot;New Folder&quot;',
-                uk: 'Кнопка &quot;Нова Папка&quot;',
-                ru: Кнопка &quot;Новая Папка&quot;'
+                en: 'Button «New Folder»',
+                uk: 'Кнопка «Нова Папка»',
+                ru: 'Кнопка «Новая Папка»'
             },
             custom_favs_show_add_desc: {
                 en: 'Show/hide the button for adding new folders',
