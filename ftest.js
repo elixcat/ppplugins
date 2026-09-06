@@ -6,6 +6,7 @@
     var HOST = window.location.origin;
     var STORAGE_KEY = "custom_favorite";
     var STORAGE_SYNC_KEY = "lampac_sync_custom_favorite";
+    var SETTINGS_HIDE_BUTTON_KEY = "custom_favorite_hide_add_button";
 
     function CustomFavoriteFolder(data) {
         var params = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
@@ -637,6 +638,48 @@
                 }
             });
         });
+
+        // Застосування налаштувань приховання кнопки
+        this.applyHideAddButton($register);
+
+        return $register;
+    }
+
+    FavoritePageService.prototype.applyHideAddButton = function ($button) {
+        var isHidden = Lampa.Storage.get(SETTINGS_HIDE_BUTTON_KEY, false);
+        
+        if (isHidden) {
+            $button.css({
+                'position': 'absolute',
+                'bottom': '0',
+                'left': '0',
+                'width': '1px',
+                'height': '1px',
+                'opacity': '0',
+                'overflow': 'hidden',
+                'pointer-events': 'none',
+                'z-index': '-1'
+            });
+        } else {
+            $button.css({
+                'position': '',
+                'bottom': '',
+                'left': '',
+                'width': '',
+                'height': '',
+                'opacity': '',
+                'overflow': '',
+                'pointer-events': '',
+                'z-index': ''
+            });
+        }
+    }
+
+    FavoritePageService.prototype.updateAddButtonVisibility = function () {
+        var $button = $('.new-custom-type');
+        if ($button.length) {
+            this.applyHideAddButton($button);
+        }
     }
 
     FavoritePageService.prototype.registerLines = function () {
@@ -838,6 +881,37 @@
 
     var cardFavoriteSvc = new CardFavoriteService();
 
+    function addSettings() {
+        if (!Lampa.SettingsApi || typeof Lampa.SettingsApi.addComponent !== 'function') return;
+
+        Lampa.SettingsApi.addComponent({
+            component: 'custom_favorite',
+            name: Lampa.Lang.translate('custom_favorite_settings'),
+            icon: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>'
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'custom_favorite',
+            param: {
+                name: SETTINGS_HIDE_BUTTON_KEY,
+                type: 'select',
+                values: {
+                    false: Lampa.Lang.translate('show'),
+                    true: Lampa.Lang.translate('hide')
+                },
+                'default': false
+            },
+            field: {
+                name: Lampa.Lang.translate('custom_favorite_hide_add_button'),
+                description: Lampa.Lang.translate('custom_favorite_hide_add_button_desc')
+            },
+            onChange: function (value) {
+                Lampa.Storage.set(SETTINGS_HIDE_BUTTON_KEY, value === 'true' || value === true);
+                favoritePageSvc.updateAddButtonVisibility();
+            }
+        });
+    }
+
     function start() {
         if (window.custom_favorites) {
             return;
@@ -963,18 +1037,43 @@
         Lampa.Lang.add({
             rename: {
                 en: 'Rename',
-                uk: 'Змінити ім’я',
+                uk: 'Змінити ім\'я',
                 ru: 'Изменить имя'
             },
             invalid_name: {
                 en: 'Invalid name',
-                uk: 'Некоректне ім’я',
+                uk: 'Некоректне ім\'я',
                 ru: 'Некорректное имя'
             },
             custom_favs: {
                 en: 'Custom bookmarks',
                 uk: 'Користувацькі закладки',
                 ru: 'Пользовательские закладки'
+            },
+            custom_favorite_settings: {
+                en: 'Custom folders',
+                uk: 'Користувацькі папки',
+                ru: 'Пользовательские папки'
+            },
+            custom_favorite_hide_add_button: {
+                en: 'Hide add folder button',
+                uk: 'Приховати кнопку додавання папки',
+                ru: 'Скрыть кнопку добавления папки'
+            },
+            custom_favorite_hide_add_button_desc: {
+                en: 'Hide the add folder button (visually, function remains active)',
+                uk: 'Приховати кнопку додавання папки (візуально, функція залишається активною)',
+                ru: 'Скрыть кнопку добавления папки (визуально, функция остается активной)'
+            },
+            show: {
+                en: 'Show',
+                uk: 'Показати',
+                ru: 'Показать'
+            },
+            hide: {
+                en: 'Hide',
+                uk: 'Приховати',
+                ru: 'Скрыть'
             }
         });
 
@@ -1009,6 +1108,8 @@
 
             if (Lampa.Activity.active().component === 'bookmarks') {
                 if ($('.new-custom-type').length !== 0) {
+                    // Оновлюємо видимість кнопки при переході на сторінку
+                    favoritePageSvc.updateAddButtonVisibility();
                     return;
                 }
 
@@ -1030,6 +1131,9 @@
                 Lampa.Activity.active().activity.toggle();
             }
         });
+
+        // Додаємо налаштування
+        addSettings();
 
         favoritePageSvc.registerLines();
     }
