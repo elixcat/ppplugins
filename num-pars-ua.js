@@ -9,18 +9,16 @@
     var DEFAULT_MIN_PROGRESS = 90;
     var MIN_PROGRESS = Lampa.Storage.get('numparser_min_progress', DEFAULT_MIN_PROGRESS);
     var newProgress = MIN_PROGRESS;
-    
+
     // Кеш для українських постерів
     var posterCache = {};
 
-    // Функція для отримання українського постера з кешем
     function getUkrainianPoster(item, callback) {
         if (!item || !item.id) {
             if (callback) callback(item);
             return;
         }
 
-        // Перевіряємо кеш
         var cacheKey = item.id + '_' + ((item.first_air_date || item.number_of_seasons) ? 'tv' : 'movie');
         if (posterCache[cacheKey]) {
             var cached = posterCache[cacheKey];
@@ -41,7 +39,6 @@
         var network = new Lampa.Reguest();
         network.silent(tmdbUrl, function(data) {
             if (data && data.poster_path) {
-                // Зберігаємо в кеш
                 posterCache[cacheKey] = {
                     poster_path: data.poster_path,
                     backdrop_path: data.backdrop_path || item.backdrop_path,
@@ -60,17 +57,6 @@
             if (callback) callback(item);
         });
     }
-
-    // Підміняємо функцію img Лампи для нашого джерела
-    var originalImg = Lampa.Api.img;
-    Lampa.Api.img = function(src, size) {
-        // Перевіряємо, чи це наш постер (з нашого джерела)
-        if (typeof src === 'string' && src.indexOf('/img/img_broken.svg') !== -1) {
-            // Якщо це наша заглушка - повертаємо її, щоб не ламало
-            return src;
-        }
-        return originalImg.call(this, src, size);
-    };
 
     function filterWatchedContent(results) {
 
@@ -415,16 +401,39 @@
 
             normalized.results = filterWatchedContent(normalized.results);
             
-            // Завантажуємо українські постери асинхронно
-            normalized.results.forEach(function(item) {
+            // Завантажуємо українські постери та оновлюємо картки
+            var totalItems = normalized.results.length;
+            var loadedItems = 0;
+            
+            normalized.results.forEach(function(item, index) {
                 if (item && item.id) {
                     getUkrainianPoster(item, function(updatedItem) {
-                        // Оновлюємо дані в результатах
-                        var index = normalized.results.indexOf(item);
-                        if (index !== -1) {
-                            normalized.results[index] = updatedItem;
+                        normalized.results[index] = updatedItem;
+                        loadedItems++;
+                        
+                        // Коли всі постери завантажені - оновлюємо відображення
+                        if (loadedItems >= totalItems) {
+                            // Знаходимо активну лінію і оновлюємо її
+                            var active = Lampa.Activity.active();
+                            if (active && active.activity_line) {
+                                var line = active.activity_line;
+                                if (line && line.card_data) {
+                                    // Оновлюємо дані
+                                    line.card_data.results = normalized.results;
+                                    // Оновлюємо відображення
+                                    if (line.update) {
+                                        line.update();
+                                    }
+                                    // Або перезавантажуємо лінію
+                                    if (line.reload) {
+                                        line.reload();
+                                    }
+                                }
+                            }
                         }
                     });
+                } else {
+                    loadedItems++;
                 }
             });
 
