@@ -10,6 +10,45 @@
     var MIN_PROGRESS = Lampa.Storage.get('numparser_min_progress', DEFAULT_MIN_PROGRESS);
     var newProgress = MIN_PROGRESS;
 
+    // Функція для отримання українського постера з TMDB по ID
+    function getUkrainianPoster(item, callback) {
+        if (!item || !item.id) {
+            if (callback) callback(item);
+            return;
+        }
+
+        var mediaType = (item.first_air_date || item.number_of_seasons) ? 'tv' : 'movie';
+        
+        // Формуємо запит до TMDB
+        var tmdbUrl = 'https://api.themoviedb.org/3/' + (mediaType === 'tv' ? 'tv' : 'movie') + '/' + item.id;
+        tmdbUrl += '?api_key=' + Lampa.Api.key;
+        tmdbUrl += '&language=uk-UA';  // Примусово українська
+        
+        // Використовуємо мережевий запит Лампи
+        var network = new Lampa.Reguest();
+        network.silent(tmdbUrl, function(data) {
+            if (data && data.poster_path) {
+                // Оновлюємо дані українськими
+                item.poster_path = data.poster_path;
+                item.backdrop_path = data.backdrop_path || item.backdrop_path;
+                item.overview = data.overview || item.overview;
+                item.title = data.title || item.title;
+                item.name = data.name || item.name;
+                item.original_title = data.original_title || item.original_title;
+                item.original_name = data.original_name || item.original_name;
+                item.vote_average = data.vote_average || item.vote_average;
+                item.release_date = data.release_date || item.release_date;
+                item.first_air_date = data.first_air_date || item.first_air_date;
+                item.number_of_seasons = data.number_of_seasons || item.number_of_seasons;
+                item.status = data.status || item.status;
+            }
+            if (callback) callback(item);
+        }, function(error) {
+            // Якщо помилка - залишаємо як є, але хоча б ID є
+            if (callback) callback(item);
+        });
+    }
+
     function filterWatchedContent(results) {
 
         var hideWatched = Lampa.Storage.get('numparser_hide_watched', false);
@@ -315,64 +354,56 @@
         self.discovery = false;
 
         function normalizeData(json) {
-                function numparser_to_https_url(v) {
-                    if (!v || typeof v !== 'string') return '';
-                    if (/^https?:\/\//i.test(v)) return v.replace(/^http:\/\//i, 'https://');
-                    if (/^\/\//.test(v)) return 'https:' + v;
-                    return '';
-                }
-                function numparser_to_tmdb_path(v) {
-                    if (!v || typeof v !== 'string') return '';
-                    if (/^https?:\/\//i.test(v)) {
-                        var u = v.replace(/^http:\/\//i, 'https://');
-                        var m = u.match(/^https?:\/\/(?:image\.tmdb\.org|www\.themoviedb\.org)\/(t\/p\/[^?#]+)/i);
-                        return m && m[1] ? '/' + m[1] : '';
-                    }
-                    if (v.charAt(0) === '/') return v;
-                    return '';
-                }
+            // Отримуємо дані з парсера
+            var results = (json.results || []).map(function (item) {
+                // Беремо тільки базову інформацію: ID та тип
+                var dataItem = {
+                    id: item.id,
+                    // Тимчасово ставимо заглушку для постера
+                    poster_path: '/img/img_broken.svg',
+                    img: '/img/img_broken.svg',
+                    backdrop_path: '/img/img_broken.svg',
+                    background_image: '/img/img_broken.svg',
+                    overview: item.overview || item.description || '',
+                    vote_average: item.vote_average || 0,
+                    source: Lampa.Storage.get('numparser_source_name') || SOURCE_NAME,
+                    type: (item.first_air_date || item.number_of_seasons) ? 'tv' : 'movie',
+                    original_title: item.original_title || item.original_name || '',
+                    title: item.title || item.name || '',
+                    original_language: item.original_language || 'en',
+                    first_air_date: item.first_air_date,
+                    number_of_seasons: item.number_of_seasons,
+                    status: item.status || '',
+                };
+
+                if (item.release_quality) dataItem.release_quality = item.release_quality;
+                if (item.release_date) dataItem.release_date = item.release_date;
+                if (item.last_air_date) dataItem.last_air_date = item.last_air_date;
+                if (item.last_episode_to_air) dataItem.last_episode_to_air = item.last_episode_to_air;
+
+                dataItem.promo_title = dataItem.title || dataItem.name || dataItem.original_title || dataItem.original_name;
+                dataItem.promo = dataItem.overview;
+
+                return dataItem;
+            });
+
             var normalized = {
-                results: (json.results || []).map(function (item) {
-                    var np_poster_path = numparser_to_tmdb_path(item.poster_path) || numparser_to_tmdb_path(item.poster) || numparser_to_tmdb_path(item.img);
-                    var np_poster_url = numparser_to_https_url(item.poster_path) || numparser_to_https_url(item.poster) || numparser_to_https_url(item.img);
-                    var np_backdrop_path = numparser_to_tmdb_path(item.backdrop_path) || numparser_to_tmdb_path(item.backdrop) || numparser_to_tmdb_path(item.background_image);
-                    var np_backdrop_url = numparser_to_https_url(item.backdrop_path) || numparser_to_https_url(item.backdrop) || numparser_to_https_url(item.background_image);
-                    var np_img = numparser_to_https_url(item.img) || item.img;
-                    var dataItem = {
-                        id: item.id,
-                        poster_path: np_poster_path || '',
-                        img: np_poster_url || np_img,
-                        overview: item.overview || item.description || '',
-                        vote_average: item.vote_average || 0,
-                        backdrop_path: np_backdrop_path || '',
-                        background_image: np_backdrop_url || item.background_image,
-                        source: Lampa.Storage.get('numparser_source_name') || SOURCE_NAME,
-                        type: (item.first_air_date || item.number_of_seasons) ? 'tv' : 'movie',
-
-                        original_title: item.original_title || item.original_name || '',
-                        title: item.title || item.name || '',
-                        original_language: item.original_language || 'en',
-                        first_air_date: item.first_air_date,
-                        number_of_seasons: item.number_of_seasons,
-                        status: item.status || '',
-                    };
-
-                    if (item.release_quality) dataItem.release_quality = item.release_quality;
-                    if (item.release_date) dataItem.release_date = item.release_date;
-                    if (item.last_air_date) dataItem.last_air_date = item.last_air_date;
-                    if (item.last_episode_to_air) dataItem.last_episode_to_air = item.last_episode_to_air;
-
-                    dataItem.promo_title = dataItem.title || dataItem.name || dataItem.original_title || dataItem.original_name;
-                    dataItem.promo = dataItem.overview;
-
-                    return dataItem;
-                }),
+                results: results,
                 page: json.page || 1,
                 total_pages: json.total_pages || json.pagesCount || 1,
                 total_results: json.total_results || json.total || 0
             };
 
+            // Фільтруємо та завантажуємо українські постери
             normalized.results = filterWatchedContent(normalized.results);
+            
+            // Завантажуємо українські постери для кожного елемента
+            normalized.results.forEach(function(item, index) {
+                getUkrainianPoster(item, function(updatedItem) {
+                    normalized.results[index] = updatedItem;
+                });
+            });
+
             return normalized;
         }
 
@@ -413,6 +444,7 @@
         self.full = function (params, onSuccess, onError) {
             var card = params.card;
             params.method = !!(card.number_of_seasons || card.seasons || card.first_air_date) ? 'tv' : 'movie';
+            params.language = 'uk-UA'; // Примусово українська
             Lampa.Api.sources.tmdb.full(params, onSuccess, onError);
         }
 
