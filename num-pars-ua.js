@@ -10,45 +10,6 @@
     var MIN_PROGRESS = Lampa.Storage.get('numparser_min_progress', DEFAULT_MIN_PROGRESS);
     var newProgress = MIN_PROGRESS;
 
-    // Функція для отримання українського постера з TMDB по ID
-    function getUkrainianPoster(item, callback) {
-        if (!item || !item.id) {
-            if (callback) callback(item);
-            return;
-        }
-
-        var mediaType = (item.first_air_date || item.number_of_seasons) ? 'tv' : 'movie';
-        
-        // Формуємо запит до TMDB
-        var tmdbUrl = 'https://api.themoviedb.org/3/' + (mediaType === 'tv' ? 'tv' : 'movie') + '/' + item.id;
-        tmdbUrl += '?api_key=' + Lampa.Api.key;
-        tmdbUrl += '&language=uk-UA';  // Примусово українська
-        
-        // Використовуємо мережевий запит Лампи
-        var network = new Lampa.Reguest();
-        network.silent(tmdbUrl, function(data) {
-            if (data && data.poster_path) {
-                // Оновлюємо дані українськими
-                item.poster_path = data.poster_path;
-                item.backdrop_path = data.backdrop_path || item.backdrop_path;
-                item.overview = data.overview || item.overview;
-                item.title = data.title || item.title;
-                item.name = data.name || item.name;
-                item.original_title = data.original_title || item.original_title;
-                item.original_name = data.original_name || item.original_name;
-                item.vote_average = data.vote_average || item.vote_average;
-                item.release_date = data.release_date || item.release_date;
-                item.first_air_date = data.first_air_date || item.first_air_date;
-                item.number_of_seasons = data.number_of_seasons || item.number_of_seasons;
-                item.status = data.status || item.status;
-            }
-            if (callback) callback(item);
-        }, function(error) {
-            // Якщо помилка - залишаємо як є, але хоча б ID є
-            if (callback) callback(item);
-        });
-    }
-
     function filterWatchedContent(results) {
 
         var hideWatched = Lampa.Storage.get('numparser_hide_watched', false);
@@ -354,16 +315,12 @@
         self.discovery = false;
 
         function normalizeData(json) {
-            // Отримуємо дані з парсера
             var results = (json.results || []).map(function (item) {
-                // Беремо тільки базову інформацію: ID та тип
                 var dataItem = {
                     id: item.id,
-                    // Тимчасово ставимо заглушку для постера
-                    poster_path: '/img/img_broken.svg',
-                    img: '/img/img_broken.svg',
-                    backdrop_path: '/img/img_broken.svg',
-                    background_image: '/img/img_broken.svg',
+                    poster_path: item.poster_path || '',  // Залишаємо те, що прийшло
+                    backdrop_path: item.backdrop_path || '',
+                    img: item.poster_path || '',
                     overview: item.overview || item.description || '',
                     vote_average: item.vote_average || 0,
                     source: Lampa.Storage.get('numparser_source_name') || SOURCE_NAME,
@@ -394,14 +351,29 @@
                 total_results: json.total_results || json.total || 0
             };
 
-            // Фільтруємо та завантажуємо українські постери
             normalized.results = filterWatchedContent(normalized.results);
             
-            // Завантажуємо українські постери для кожного елемента
-            normalized.results.forEach(function(item, index) {
-                getUkrainianPoster(item, function(updatedItem) {
-                    normalized.results[index] = updatedItem;
-                });
+            // Завантажуємо українські постери
+            normalized.results.forEach(function(item) {
+                if (item && item.id) {
+                    var mediaType = (item.first_air_date || item.number_of_seasons) ? 'tv' : 'movie';
+                    var tmdbUrl = 'https://api.themoviedb.org/3/' + (mediaType === 'tv' ? 'tv' : 'movie') + '/' + item.id;
+                    tmdbUrl += '?api_key=' + Lampa.Api.key;
+                    tmdbUrl += '&language=uk-UA';
+                    
+                    var network = new Lampa.Reguest();
+                    network.silent(tmdbUrl, function(data) {
+                        if (data && data.poster_path) {
+                            item.poster_path = data.poster_path;
+                            item.backdrop_path = data.backdrop_path || item.backdrop_path;
+                            item.img = data.poster_path;
+                            item.overview = data.overview || item.overview;
+                            item.title = data.title || item.title;
+                            item.original_title = data.original_title || item.original_title;
+                            item.vote_average = data.vote_average || item.vote_average;
+                        }
+                    }, function(error) {});
+                }
             });
 
             return normalized;
@@ -422,10 +394,8 @@
 
         self.list = function (params, onComplete, onError) {
             params = params || {};
-            onComplete = onComplete || function () {
-            };
-            onError = onError || function () {
-            };
+            onComplete = onComplete || function () {};
+            onError = onError || function () {};
 
             var category = params.url || CATEGORIES.movies_new;
             var page = params.page || 1;
@@ -444,7 +414,7 @@
         self.full = function (params, onSuccess, onError) {
             var card = params.card;
             params.method = !!(card.number_of_seasons || card.seasons || card.first_air_date) ? 'tv' : 'movie';
-            params.language = 'uk-UA'; // Примусово українська
+            params.language = 'uk-UA';
             Lampa.Api.sources.tmdb.full(params, onSuccess, onError);
         }
 
@@ -473,7 +443,8 @@
             });
             if (CATEGORY_VISIBILITY.russian_tv.visible) partsData.push(function (callback) {
                 makeRequest(CATEGORIES.russian_tv, CATEGORY_VISIBILITY.russian_tv.title, callback);
-            });            if (CATEGORY_VISIBILITY.k4.visible) partsData.push(function (callback) {
+            });            
+            if (CATEGORY_VISIBILITY.k4.visible) partsData.push(function (callback) {
                 makeRequest(CATEGORIES.k4, CATEGORY_VISIBILITY.k4.title, callback);
             });
             if (CATEGORY_VISIBILITY.legends.visible) partsData.push(function (callback) {
@@ -510,7 +481,6 @@
 
                     if (filteredResults.length < (json.results || []).length) {
                         totalResults = totalResults - ((json.results || []).length - filteredResults.length);
-
                         totalPages = Math.ceil(totalResults / 20);
                     }
 
@@ -825,12 +795,9 @@ function startPlugin() {
             }
         });
 
-        // 1) Головна: щоб при вибраному NUMParser не падало і редиректило в NUM category
         numparserApi.main = function (params, onComplete, onError) {
-            // Lampa в main() очікує масив (інакше data.forEach...)
             if (typeof onComplete === 'function') onComplete([]);
 
-            // включаємо редирект тільки якщо NUMParser вибраний основним джерелом
             try {
                 var current = Lampa.Storage.get('source', 'tmdb');
                 if (current !== SOURCE_NAME) return;
@@ -838,7 +805,6 @@ function startPlugin() {
                 return;
             }
 
-            // редирект на нашу категорію
             setTimeout(function () {
                 try {
                     Lampa.Activity.replace({
@@ -852,7 +818,6 @@ function startPlugin() {
             }, 0);
         };
 
-        // 2) Фільми/Серіали: залишити TMDB, навіть якщо NUMParser вибраний основним source
         (function () {
             if (window.__numparser_keep_movies_tv_tmdb) return;
             window.__numparser_keep_movies_tv_tmdb = true;
@@ -863,11 +828,9 @@ function startPlugin() {
             function patch(params) {
                 if (!params) return params;
 
-                // працюємо ТІЛЬКИ якщо користувач вибрав NUMParser як основний джерело
                 var current = Lampa.Storage.get('source', 'tmdb');
                 if (current !== SOURCE_NAME) return params;
 
-                // Фільми/Серіали зазвичай: component:'category' + url:'movie'/'tv'
                 if (params.component === 'category' && (params.url === 'movie' || params.url === 'tv')) {
                     params.source = 'tmdb';
                 }
@@ -888,15 +851,12 @@ function startPlugin() {
             var sources = Object.assign({}, (Lampa.Params.values && Lampa.Params.values['source']) ? Lampa.Params.values['source'] : {});
             sources[SOURCE_NAME] = SOURCE_NAME;
 
-            // 3-й параметр — дефолт, якщо у користувача ще не вибраний джерело
-            // залишаємо 'tmdb', щоб нікому раптово не переключити за замовчуванням
             Lampa.Params.select('source', sources, 'tmdb');
         } catch (e) {}
 
         var menuItem = $('<li data-action="numparser" class="menu__item selector"><div class="menu__ico">' + ICON + '</div><div class="menu__text num_text">' + SOURCE_NAME + '</div></li>');
         $('.menu .menu__list').eq(0).append(menuItem);
 
-        // --- авто-рефреш "Головної" при зміні основного source + приховування пункту меню NUM ---
         (function () {
             if (window.__numparser_source_watch) return;
             window.__numparser_source_watch = true;
@@ -907,17 +867,13 @@ function startPlugin() {
 
             function updateNumMenuVisibility() {
                 try {
-                    // якщо NUM вибраний основним — ховаємо пункт меню NUM (щоб не дублювався)
-                    // налаштування при цьому залишаються в SettingsApi (ми їх не чіпаємо)
                     if (isNumSelected()) menuItem.hide();
                     else menuItem.show();
                 } catch (e) {}
             }
 
-            // первинне встановлення видимості
             updateNumMenuVisibility();
 
-            // перехоплення зміни Storage.source
             var origSet = Lampa.Storage.set;
             Lampa.Storage.set = function (key, value) {
                 var res = origSet.apply(this, arguments);
@@ -929,7 +885,6 @@ function startPlugin() {
                         var active = Lampa.Activity.active && Lampa.Activity.active();
                         if (active && active.component === 'main') {
 
-                            // Якщо вибрали NUM — одразу йдемо в NUM category (без спроби перестворити main)
                             if (value === SOURCE_NAME) {
                                 Lampa.Activity.replace({
                                     title: SOURCE_NAME,
@@ -939,7 +894,6 @@ function startPlugin() {
                                     url: ''
                                 });
                             }
-                            // Якщо повернулись на tmdb — перезбираємо звичайну головну
                             else {
                                 Lampa.Activity.replace({ component: 'main' });
                             }
