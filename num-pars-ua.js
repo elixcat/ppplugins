@@ -9,6 +9,68 @@
     var DEFAULT_MIN_PROGRESS = 90;
     var MIN_PROGRESS = Lampa.Storage.get('numparser_min_progress', DEFAULT_MIN_PROGRESS);
     var newProgress = MIN_PROGRESS;
+    
+    // Кеш для українських постерів
+    var posterCache = {};
+
+    // Функція для отримання українського постера з кешем
+    function getUkrainianPoster(item, callback) {
+        if (!item || !item.id) {
+            if (callback) callback(item);
+            return;
+        }
+
+        // Перевіряємо кеш
+        var cacheKey = item.id + '_' + ((item.first_air_date || item.number_of_seasons) ? 'tv' : 'movie');
+        if (posterCache[cacheKey]) {
+            var cached = posterCache[cacheKey];
+            item.poster_path = cached.poster_path;
+            item.backdrop_path = cached.backdrop_path;
+            item.img = cached.poster_path;
+            item.title = cached.title || item.title;
+            item.overview = cached.overview || item.overview;
+            if (callback) callback(item);
+            return;
+        }
+
+        var mediaType = (item.first_air_date || item.number_of_seasons) ? 'tv' : 'movie';
+        var tmdbUrl = 'https://api.themoviedb.org/3/' + (mediaType === 'tv' ? 'tv' : 'movie') + '/' + item.id;
+        tmdbUrl += '?api_key=' + Lampa.Api.key;
+        tmdbUrl += '&language=uk-UA';
+        
+        var network = new Lampa.Reguest();
+        network.silent(tmdbUrl, function(data) {
+            if (data && data.poster_path) {
+                // Зберігаємо в кеш
+                posterCache[cacheKey] = {
+                    poster_path: data.poster_path,
+                    backdrop_path: data.backdrop_path || item.backdrop_path,
+                    title: data.title || item.title,
+                    overview: data.overview || item.overview
+                };
+                
+                item.poster_path = data.poster_path;
+                item.backdrop_path = data.backdrop_path || item.backdrop_path;
+                item.img = data.poster_path;
+                item.title = data.title || item.title;
+                item.overview = data.overview || item.overview;
+            }
+            if (callback) callback(item);
+        }, function(error) {
+            if (callback) callback(item);
+        });
+    }
+
+    // Підміняємо функцію img Лампи для нашого джерела
+    var originalImg = Lampa.Api.img;
+    Lampa.Api.img = function(src, size) {
+        // Перевіряємо, чи це наш постер (з нашого джерела)
+        if (typeof src === 'string' && src.indexOf('/img/img_broken.svg') !== -1) {
+            // Якщо це наша заглушка - повертаємо її, щоб не ламало
+            return src;
+        }
+        return originalImg.call(this, src, size);
+    };
 
     function filterWatchedContent(results) {
 
@@ -318,7 +380,7 @@
             var results = (json.results || []).map(function (item) {
                 var dataItem = {
                     id: item.id,
-                    poster_path: item.poster_path || '',  // Залишаємо те, що прийшло
+                    poster_path: item.poster_path || '',
                     backdrop_path: item.backdrop_path || '',
                     img: item.poster_path || '',
                     overview: item.overview || item.description || '',
@@ -353,26 +415,16 @@
 
             normalized.results = filterWatchedContent(normalized.results);
             
-            // Завантажуємо українські постери
+            // Завантажуємо українські постери асинхронно
             normalized.results.forEach(function(item) {
                 if (item && item.id) {
-                    var mediaType = (item.first_air_date || item.number_of_seasons) ? 'tv' : 'movie';
-                    var tmdbUrl = 'https://api.themoviedb.org/3/' + (mediaType === 'tv' ? 'tv' : 'movie') + '/' + item.id;
-                    tmdbUrl += '?api_key=' + Lampa.Api.key;
-                    tmdbUrl += '&language=uk-UA';
-                    
-                    var network = new Lampa.Reguest();
-                    network.silent(tmdbUrl, function(data) {
-                        if (data && data.poster_path) {
-                            item.poster_path = data.poster_path;
-                            item.backdrop_path = data.backdrop_path || item.backdrop_path;
-                            item.img = data.poster_path;
-                            item.overview = data.overview || item.overview;
-                            item.title = data.title || item.title;
-                            item.original_title = data.original_title || item.original_title;
-                            item.vote_average = data.vote_average || item.vote_average;
+                    getUkrainianPoster(item, function(updatedItem) {
+                        // Оновлюємо дані в результатах
+                        var index = normalized.results.indexOf(item);
+                        if (index !== -1) {
+                            normalized.results[index] = updatedItem;
                         }
-                    }, function(error) {});
+                    });
                 }
             });
 
