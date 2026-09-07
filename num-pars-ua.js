@@ -10,44 +10,6 @@
     var MIN_PROGRESS = Lampa.Storage.get('numparser_min_progress', DEFAULT_MIN_PROGRESS);
     var newProgress = MIN_PROGRESS;
 
-    // Функція для завантаження українського постера з TMDB
-    function loadUkrainianPoster(item, callback) {
-        if (!item || !item.id) {
-            if (callback) callback(item);
-            return;
-        }
-
-        var mediaType = (item.first_air_date || item.number_of_seasons) ? 'tv' : 'movie';
-        var lang = 'uk';
-
-        // Отримуємо дані з TMDB українською
-        Lampa.Api.sources.tmdb.full({
-            card: {
-                id: item.id,
-                type: mediaType,
-                original_title: item.original_title || item.original_name || '',
-                title: item.title || item.name || ''
-            },
-            method: mediaType,
-            language: lang
-        }, function(result) {
-            if (result && result.poster_path) {
-                // Оновлюємо постер
-                item.poster_path = result.poster_path;
-                item.backdrop_path = result.backdrop_path || item.backdrop_path;
-                item.overview = result.overview || item.overview;
-                item.title = result.title || item.title;
-                item.name = result.name || item.name;
-                item.original_title = result.original_title || item.original_title;
-                item.original_name = result.original_name || item.original_name;
-            }
-            if (callback) callback(item);
-        }, function(error) {
-            // Якщо помилка - залишаємо як є
-            if (callback) callback(item);
-        });
-    }
-
     function filterWatchedContent(results) {
 
         var hideWatched = Lampa.Storage.get('numparser_hide_watched', false);
@@ -439,40 +401,11 @@
             var url = BASE_URL + '/' + category + '?page=' + page + '&language=' + Lampa.Storage.get('tmdb_lang', 'uk');
 
             self.get(url, params, function (json) {
-                // Отримуємо результати
-                var results = json.results || [];
-                var totalResults = json.total_results || 0;
-                var totalPages = json.total_pages || 1;
-
-                // Завантажуємо українські постери для кожного елемента
-                var processedCount = 0;
-                var totalCount = results.length;
-
-                if (totalCount === 0) {
-                    onComplete({
-                        results: results,
-                        page: json.page || page,
-                        total_pages: totalPages,
-                        total_results: totalResults
-                    });
-                    return;
-                }
-
-                results.forEach(function(item, index) {
-                    loadUkrainianPoster(item, function(updatedItem) {
-                        results[index] = updatedItem;
-                        processedCount++;
-
-                        if (processedCount >= totalCount) {
-                            // Всі постери оновлені
-                            onComplete({
-                                results: results,
-                                page: json.page || page,
-                                total_pages: totalPages,
-                                total_results: totalResults
-                            });
-                        }
-                    });
+                onComplete({
+                    results: json.results || [],
+                    page: json.page || page,
+                    total_pages: json.total_pages || 1,
+                    total_results: json.total_results || 0
                 });
             }, onError);
         };
@@ -480,8 +413,6 @@
         self.full = function (params, onSuccess, onError) {
             var card = params.card;
             params.method = !!(card.number_of_seasons || card.seasons || card.first_air_date) ? 'tv' : 'movie';
-            // Примусово передаємо українську мову для повної інформації
-            params.language = 'uk';
             Lampa.Api.sources.tmdb.full(params, onSuccess, onError);
         }
 
@@ -545,57 +476,26 @@
                     var totalResults = json.total_results || 0;
                     var totalPages = json.total_pages || 1;
 
-                    // Довантажуємо українські постери
-                    var processedCount = 0;
-                    var totalCount = filteredResults.length;
+                    if (filteredResults.length < (json.results || []).length) {
+                        totalResults = totalResults - ((json.results || []).length - filteredResults.length);
 
-                    if (totalCount === 0) {
-                        var result = {
-                            url: category,
-                            title: title,
-                            page: page,
-                            total_results: totalResults,
-                            total_pages: totalPages,
-                            more: totalPages > page,
-                            results: filteredResults,
-                            source: Lampa.Storage.get('numparser_source_name') || SOURCE_NAME,
-                            _original_total_results: json.total_results || 0,
-                            _original_total_pages: json.total_pages || 1,
-                            _original_results: json.results || []
-                        };
-                        callback(result);
-                        return;
+                        totalPages = Math.ceil(totalResults / 20);
                     }
 
-                    filteredResults.forEach(function(item, index) {
-                        loadUkrainianPoster(item, function(updatedItem) {
-                            filteredResults[index] = updatedItem;
-                            processedCount++;
-
-                            if (processedCount >= totalCount) {
-                                // Корегуємо totalResults та totalPages
-                                if (filteredResults.length < (json.results || []).length) {
-                                    totalResults = totalResults - ((json.results || []).length - filteredResults.length);
-                                    totalPages = Math.ceil(totalResults / 20);
-                                }
-
-                                var result = {
-                                    url: category,
-                                    title: title,
-                                    page: page,
-                                    total_results: totalResults,
-                                    total_pages: totalPages,
-                                    more: totalPages > page,
-                                    results: filteredResults,
-                                    source: Lampa.Storage.get('numparser_source_name') || SOURCE_NAME,
-                                    _original_total_results: json.total_results || 0,
-                                    _original_total_pages: json.total_pages || 1,
-                                    _original_results: json.results || []
-                                };
-                                callback(result);
-                            }
-                        });
-                    });
+                    var result = {
+                        url: category,
+                        title: title,
+                        page: page,
+                        total_results: totalResults,
+                        total_pages: totalPages,
+                        more: totalPages > page,
+                        results: filteredResults,
+                        source: Lampa.Storage.get('numparser_source_name') || SOURCE_NAME,
+                        _original_total_results: json.total_results || 0,
+                        _original_total_pages: json.total_pages || 1,
+                        _original_results: json.results || []
+                    };
+                    callback(result);
                 }, function (error) {
                     callback({error: error});
                 });
