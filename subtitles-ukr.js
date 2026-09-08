@@ -3,7 +3,7 @@
 
     var PLUGIN_ID = 'opensubtitles_ru';
     var PLUGIN_TITLE = 'OpenSubtitles';
-    var DEFAULT_LANG = 'rus';
+    var DEFAULT_LANG = 'ukr';
 
     var ADDONS = [
         'https://opensubtitles-v3.strem.io'
