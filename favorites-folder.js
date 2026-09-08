@@ -1080,27 +1080,27 @@
                 uk: 'Користувацькі закладки',
                 ru: 'Пользовательские закладки'
             },
-            custom_favs_settings: {
+            custom_favorite_settings: {
                 en: 'Custom folders',
                 uk: 'Користувацькі папки',
                 ru: 'Пользовательские папки'
             },
-            custom_favs_show_add: {
+            custom_favorite_hide_add_button: {
                 en: 'Button «New Folder»',
                 uk: 'Кнопка «Нова Папка»',
                 ru: 'Кнопка «Новая Папка»'
             },
-            custom_favs_show_add_desc: {
+            custom_favorite_hide_add_button_desc: {
                 en: 'Show/hide the button for adding new folders',
                 uk: 'Показувати/Приховувати кнопку додавання нових папок',
                 ru: 'Показывать/Скрывать кнопку добавления новых папок'
             },
-            custom_favs_show: {
+            show: {
                 en: 'Show',
                 uk: 'Показувати',
                 ru: 'Показывать'
             },
-            custom_favs_hide: {
+            hide: {
                 en: 'Hide',
                 uk: 'Приховувати',
                 ru: 'Скрывать'
