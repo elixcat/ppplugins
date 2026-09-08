@@ -1067,12 +1067,12 @@
         Lampa.Lang.add({
             rename: {
                 en: 'Rename',
-                uk: 'Змінити ім\'я',
+                uk: 'Змінити назву',
                 ru: 'Изменить имя'
             },
             invalid_name: {
                 en: 'Invalid name',
-                uk: 'Некоректне ім\'я',
+                uk: 'Некоректна назва',
                 ru: 'Некорректное имя'
             },
             custom_favs: {
@@ -1080,30 +1080,30 @@
                 uk: 'Користувацькі закладки',
                 ru: 'Пользовательские закладки'
             },
-            custom_favorite_settings: {
+            custom_favs_settings: {
                 en: 'Custom folders',
                 uk: 'Користувацькі папки',
                 ru: 'Пользовательские папки'
             },
-            custom_favorite_hide_add_button: {
-                en: 'Hide add folder button',
-                uk: 'Приховати кнопку додавання папки',
-                ru: 'Скрыть кнопку добавления папки'
+            custom_favs_show_add: {
+                en: 'Button «New Folder»',
+                uk: 'Кнопка «Нова Папка»',
+                ru: 'Кнопка «Новая Папка»'
             },
-            custom_favorite_hide_add_button_desc: {
-                en: 'Hide the add folder button (visually, function remains active)',
-                uk: 'Приховати кнопку додавання папки (візуально, функція залишається активною)',
-                ru: 'Скрыть кнопку добавления папки (визуально, функция остается активной)'
+            custom_favs_show_add_desc: {
+                en: 'Show/hide the button for adding new folders',
+                uk: 'Показувати/Приховувати кнопку додавання нових папок',
+                ru: 'Показывать/Скрывать кнопку добавления новых папок'
             },
-            show: {
+            custom_favs_show: {
                 en: 'Show',
-                uk: 'Показати',
-                ru: 'Показать'
+                uk: 'Показувати',
+                ru: 'Показывать'
             },
-            hide: {
+            custom_favs_hide: {
                 en: 'Hide',
-                uk: 'Приховати',
-                ru: 'Скрыть'
+                uk: 'Приховувати',
+                ru: 'Скрывать'
             }
         });
 
