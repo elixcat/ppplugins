@@ -3955,40 +3955,6 @@
         serviceNetwork.clear();
     }
 
-    function injectOriginalTitle(body, movie) {
-        if (!body || !body.find || !movie) return;
-
-        var displayTitle = (movie.title || movie.name || '').trim();
-        var origTitle = (movie.original_title || movie.original_name || '').trim();
-
-        if (!origTitle || origTitle === displayTitle) return;
-
-        body.find('.opensub2-original-title-row').remove();
-
-        var head = body.find('.full-start-new__head').first();
-        if (!head.length) return;
-
-        var span = $('<span class="opensub2-original-title-row"></span>').text(origTitle + ', ');
-        head.prepend(span);
-        head.removeClass('hide');
-    }
-
-    if (Lampa.Listener && typeof Lampa.Listener.follow === 'function') {
-        if (Lampa.Listener._opensub2_full_listener) {
-            try { Lampa.Listener.remove('full', Lampa.Listener._opensub2_full_listener); }
-            catch (e) {}
-        }
-
-        var fullListener = function (event) {
-            if (event && (event.type === 'complite' || event.type === 'build') && event.body && event.data && event.data.movie) {
-                injectOriginalTitle(event.body, event.data.movie);
-            }
-        };
-
-        Lampa.Listener.follow('full', fullListener);
-        Lampa.Listener._opensub2_full_listener = fullListener;
-    }
-
     loadTranslationCacheFromStorage();
     addSettings();
     hookPanelSetSubs();
