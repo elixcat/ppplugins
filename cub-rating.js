@@ -77,10 +77,23 @@
 		window.cub_rating_plugin = true;
 		Lampa.Listener.follow('full', function (e) {
 			if (e.type === 'complite') {
+				// Перевіряємо, що це саме детальна сторінка, а не міні-картка
 				var render = e.object.activity.render();
+				if (!render) return;
+
+				// Якщо render знаходиться всередині .card — це міні-картка, ігноруємо
+				var $render = $(render);
+				if ($render.closest('.card').length) return;
+
+				// Також перевіряємо, що це не explorer/selectbox
+				if ($render.closest('.explorer, .select-box, .layer--online').length) return;
+
 				var rateCub = $('.rate--cub', render);
 				if (rateCub.length === 0) {
-					$('.rate--kp', render).after('<div class="full-start__rate rate--cub hide"><div></div><div></div><div style="padding-left: 0;">CUB</div></div>');
+					var $kp = $('.rate--kp', render);
+					// Вставляємо тільки якщо .rate--kp існує і НЕ в міні-картці
+					if (!$kp.length || $kp.closest('.card').length) return;
+					$kp.after('<div class="full-start__rate rate--cub hide"><div></div><div></div><div style="padding-left: 0;">CUB</div></div>');
 					rateCub = $('.rate--cub', render);
 				}
 				if (rateCub.hasClass('hide')) {
