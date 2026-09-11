@@ -77,22 +77,22 @@
 		window.cub_rating_plugin = true;
 		Lampa.Listener.follow('full', function (e) {
 			if (e.type === 'complite') {
-				// Перевіряємо, що це саме детальна сторінка, а не міні-картка
 				var render = e.object.activity.render();
 				if (!render) return;
 
-				// Якщо render знаходиться всередині .card — це міні-картка, ігноруємо
 				var $render = $(render);
-				if ($render.closest('.card').length) return;
 
-				// Також перевіряємо, що це не explorer/selectbox
-				if ($render.closest('.explorer, .select-box, .layer--online').length) return;
+				// Головна перевірка: детальна сторінка має містити .full-start-new__rate-line
+				// або .full-start__rate, і НЕ бути всередині .card__view (міні-картки)
+				if ($render.closest('.card__view').length) return;
+				if (!$render.find('.full-start-new__rate-line').length && !$render.find('.full-start__rate').length) return;
 
 				var rateCub = $('.rate--cub', render);
 				if (rateCub.length === 0) {
-					var $kp = $('.rate--kp', render);
-					// Вставляємо тільки якщо .rate--kp існує і НЕ в міні-картці
-					if (!$kp.length || $kp.closest('.card').length) return;
+					var $kp = $render.find('.rate--kp').first();
+					if (!$kp.length) return;
+					// Переконуємось, що .rate--kp саме з детальної сторінки
+					if ($kp.closest('.card__view').length) return;
 					$kp.after('<div class="full-start__rate rate--cub hide"><div></div><div></div><div style="padding-left: 0;">CUB</div></div>');
 					rateCub = $('.rate--cub', render);
 				}
