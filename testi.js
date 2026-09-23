@@ -1,8 +1,4 @@
 (function() {
-  'use strict';
-
-  Lampa.Platform.tv();
-  (function() {
 
     'use strict';
 
@@ -74,7 +70,374 @@
           };
         },
         PersonalSource = function(baseSource) {
-          this.network = new Lampa[("Reguest")](), this.discovery = false, this.main = function() {
+          this.network = new Lampa[("Reguest")](), this.discovery = false;
+          var selfSource = this;
+
+          // === CommunityWatches: конфігурація джерела ===
+          var CW_API_BASE_URL = 'https://wh.lme.isroot.in';
+          var CW_TOP_ENDPOINT = '/v2/top';
+          var CW_DEFAULT_PERIOD = '7d';
+          var CW_DEFAULT_TOP = 'desc';
+          var CW_CACHE_TTL = 1000 * 60 * 5;
+          var CW_TMDB_CACHE_LIFE = 60 * 24;
+          var CW_CONCURRENT_LOAD_LIMIT = 8;
+          var CW_NATIVE_PER_PAGE = 40;
+          var CW_MAX_PER_PAGE = 200;
+          var CW_MAX_SERVER_PAGES = 25;
+          var cwPageCache = {};
+          var cwFilteredStateCache = {};
+
+          function cwNormalizeMinRating(value) {
+            var rating = parseFloat(value);
+            return Number.isFinite(rating) && rating > 0 ? rating : 0;
+          }
+          function cwNormalizePage(value) {
+            return Math.max(1, parseInt(value, 10) || 1);
+          }
+          function cwNormalizePerPage(value) {
+            var parsed = parseInt(value, 10) || CW_NATIVE_PER_PAGE;
+            return Math.max(1, Math.min(CW_MAX_PER_PAGE, parsed));
+          }
+          function cwCreateBaseQueryKey(params, perPage) {
+            params = params || {};
+            return [(params.type || ''), (params.period || CW_DEFAULT_PERIOD), (params.top || CW_DEFAULT_TOP), cwNormalizeMinRating(params.min_rating), cwNormalizePerPage(perPage)].join('|');
+          }
+          function cwCreatePageCacheKey(params, page, perPage) {
+            return cwCreateBaseQueryKey(params, perPage) + '|p=' + cwNormalizePage(page);
+          }
+          function cwParseTopId(rawId) {
+            if (typeof rawId !== 'string') return null;
+            var parsed = rawId.match(/^(movie|tv):(\d+)$/);
+            if (!parsed) return null;
+            return { type: parsed[1], id: parseInt(parsed[2], 10) };
+          }
+          function cwCacheGet(bucket, key) {
+            var now = Date.now();
+            var item = bucket[key];
+            if (item && now - item.time < CW_CACHE_TTL) return item.value;
+            return null;
+          }
+          function cwCacheSet(bucket, key, value) {
+            bucket[key] = { time: Date.now(), value: value };
+          }
+          function cwBuildTopUrl(params) {
+            params = params || {};
+            var query = new URLSearchParams();
+            query.set('period', params.period || CW_DEFAULT_PERIOD);
+            query.set('top', params.top || CW_DEFAULT_TOP);
+            query.set('page', String(cwNormalizePage(params.page)));
+            query.set('per_page', String(cwNormalizePerPage(params.per_page)));
+            if (params.type) query.set('type', params.type);
+            return CW_API_BASE_URL + CW_TOP_ENDPOINT + '?' + query.toString();
+          }
+          function cwParseLineUrl(url) {
+            var safeUrl = String(url || '');
+            var queryText = safeUrl.indexOf('?') >= 0 ? safeUrl.split('?')[1] : '';
+            var query = new URLSearchParams(queryText);
+            var top = query.get('top');
+            var period = query.get('period');
+            var type = query.get('type');
+            var minRating = cwNormalizeMinRating(query.get('min_rating'));
+            var perPage = cwNormalizePerPage(query.get('per_page'));
+            return {
+              top: top == 'asc' ? 'asc' : CW_DEFAULT_TOP,
+              period: period || CW_DEFAULT_PERIOD,
+              type: type == 'movie' || type == 'tv' ? type : '',
+              min_rating: minRating,
+              per_page: perPage
+            };
+          }
+          function cwBuildLineUrl(params) {
+            params = params || {};
+            var query = new URLSearchParams();
+            query.set('period', params.period || CW_DEFAULT_PERIOD);
+            query.set('top', params.top || CW_DEFAULT_TOP);
+            query.set('per_page', String(cwNormalizePerPage(params.per_page)));
+            if (params.type) query.set('type', params.type);
+            if (cwNormalizeMinRating(params.min_rating) > 0) query.set('min_rating', String(cwNormalizeMinRating(params.min_rating)));
+            return 'v2/top?' + query.toString();
+          }
+          function cwRequestTopPage(params) {
+            params = params || {};
+            var safePage = cwNormalizePage(params.page);
+            var safePerPage = cwNormalizePerPage(params.per_page);
+            return new Promise(function(resolve, reject) {
+              try {
+                Lampa.Network.silent(cwBuildTopUrl(params), function(json) {
+                  if (Array.isArray(json)) {
+                    return resolve({ items: json, page: safePage, per_page: safePerPage, total: json.length, total_pages: 1 });
+                  }
+                  if (json && Array.isArray(json.items)) {
+                    return resolve({
+                      items: json.items,
+                      page: cwNormalizePage(json.page || safePage),
+                      per_page: cwNormalizePerPage(json.per_page || safePerPage),
+                      total: Math.max(0, parseInt(json.total, 10) || 0),
+                      total_pages: Math.max(1, parseInt(json.total_pages, 10) || 1)
+                    });
+                  }
+                  resolve({ items: [], page: safePage, per_page: safePerPage, total: 0, total_pages: 1 });
+                }, reject);
+              } catch (e) { reject(e); }
+            });
+          }
+          function cwRequestTmdbCard(type, id) {
+            return new Promise(function(resolve) {
+              try {
+                if (!Lampa.Api || !Lampa.Api.sources || !Lampa.Api.sources.tmdb) return resolve(null);
+                Lampa.Api.sources.tmdb.get(type + '/' + id, {}, function(card) {
+                  resolve(card || null);
+                }, function() { resolve(null); }, { life: CW_TMDB_CACHE_LIFE });
+              } catch (e) { resolve(null); }
+            });
+          }
+          function cwMapWithLimit(items, limit, mapItem) {
+            return new Promise(function(resolve) {
+              if (!items.length) return resolve([]);
+              var result = new Array(items.length);
+              var active = 0, index = 0, done = 0;
+              function next() {
+                if (done >= items.length && active === 0) return resolve(result);
+                var _loop = function() {
+                  var currentIndex = index++;
+                  active++;
+                  Promise.resolve(mapItem(items[currentIndex], currentIndex)).then(function(value) {
+                    result[currentIndex] = value || null;
+                  })["catch"](function() {
+                    result[currentIndex] = null;
+                  })["finally"](function() {
+                    active--; done++; next();
+                  });
+                };
+                while (active < limit && index < items.length) _loop();
+              }
+              next();
+            });
+          }
+          function cwIsBelowMinRating(card, minRating) {
+            minRating = minRating || 0;
+            if (minRating <= 0) return false;
+            var voteCount = Number(card && card.vote_count || 0);
+            var voteAverage = Number(card && card.vote_average || 0);
+            if (voteCount <= 0) return false;
+            return voteAverage < minRating;
+          }
+          function cwMapApiItemsToCards(items, minRating) {
+            minRating = minRating || 0;
+            var parsed = items.map(function(item) {
+              var idInfo = cwParseTopId(item && item.id);
+              if (!idInfo) return null;
+              return {
+                type: idInfo.type,
+                id: idInfo.id,
+                requests_count: Number(item.requests_count || 0),
+                source_id: item.id
+              };
+            }).filter(Boolean);
+            if (!parsed.length) return Promise.resolve([]);
+            return cwMapWithLimit(parsed, CW_CONCURRENT_LOAD_LIMIT, function(entry) {
+              return cwRequestTmdbCard(entry.type, entry.id).then(function(card) {
+                if (!card) return null;
+                if (cwIsBelowMinRating(card, minRating)) return null;
+                card.community_watches_requests_count = entry.requests_count;
+                card.community_watches_source_id = entry.source_id;
+                return card;
+              });
+            }).then(function(cards) { return cards.filter(Boolean); });
+          }
+          function cwFetchTopCardsPage(params) {
+            params = params || {};
+            var safePage = cwNormalizePage(params.page);
+            var safePerPage = cwNormalizePerPage(params.per_page);
+            var minRating = cwNormalizeMinRating(params.min_rating);
+            return cwRequestTopPage({
+              period: params.period,
+              top: params.top,
+              type: params.type,
+              page: safePage,
+              per_page: safePerPage
+            }).then(function(payload) {
+              return cwMapApiItemsToCards(payload.items || [], minRating).then(function(results) {
+                return {
+                  results: results,
+                  page: payload.page,
+                  per_page: payload.per_page,
+                  total: payload.total,
+                  total_pages: payload.total_pages
+                };
+              });
+            });
+          }
+          function cwFetchTopCardsPageCached(params) {
+            params = params || {};
+            var safePage = cwNormalizePage(params.page);
+            var safePerPage = cwNormalizePerPage(params.per_page);
+            var key = cwCreatePageCacheKey(params, safePage, safePerPage);
+            var cached = cwCacheGet(cwPageCache, key);
+            if (cached) return Promise.resolve(cached);
+            return cwFetchTopCardsPage({
+              period: params.period,
+              top: params.top,
+              type: params.type,
+              min_rating: params.min_rating,
+              page: safePage,
+              per_page: safePerPage
+            }).then(function(pageData) {
+              cwCacheSet(cwPageCache, key, pageData);
+              return pageData;
+            });
+          }
+          function cwGetFilteredState(params, perPage) {
+            params = params || {};
+            var key = cwCreateBaseQueryKey(params, perPage) + '|filtered';
+            var state = cwCacheGet(cwFilteredStateCache, key);
+            if (state) return state;
+            state = { items: [], next_server_page: 1, server_total_pages: 1, done: false };
+            cwCacheSet(cwFilteredStateCache, key, state);
+            return state;
+          }
+          function cwFetchFilteredLogicalPage(params, page, perPage) {
+            params = params || {};
+            var safePage = cwNormalizePage(page);
+            var safePerPage = cwNormalizePerPage(perPage);
+            var state = cwGetFilteredState(params, safePerPage);
+            var neededItems = safePage * safePerPage;
+            var serverPagesThisRun = 0;
+
+            function loadNext() {
+              if (!(state.items.length < neededItems && !state.done)) return Promise.resolve();
+              if (serverPagesThisRun >= CW_MAX_SERVER_PAGES) {
+                state.done = true;
+                return Promise.resolve();
+              }
+              serverPagesThisRun++;
+              return cwFetchTopCardsPageCached({
+                period: params.period,
+                top: params.top,
+                type: params.type,
+                min_rating: params.min_rating,
+                page: state.next_server_page,
+                per_page: safePerPage
+              }).then(function(pageData) {
+                state.server_total_pages = Math.max(1, pageData.total_pages || 1);
+                if (pageData.results.length) state.items = state.items.concat(pageData.results);
+                if (state.next_server_page >= state.server_total_pages) {
+                  state.done = true;
+                } else {
+                  state.next_server_page += 1;
+                }
+                return loadNext();
+              });
+            }
+
+            return loadNext().then(function() {
+              var from = (safePage - 1) * safePerPage;
+              var to = from + safePerPage;
+              var results = state.items.slice(from, to);
+              var totalPages = state.done ? Math.max(1, Math.ceil(state.items.length / safePerPage)) : safePage + 1;
+              return { results: results, page: safePage, per_page: safePerPage, total_pages: totalPages };
+            });
+          }
+          function cwFetchLogicalPage(params, page, perPage) {
+            params = params || {};
+            var safePage = cwNormalizePage(page);
+            var safePerPage = cwNormalizePerPage(perPage);
+            if (cwNormalizeMinRating(params.min_rating) > 0) {
+              return cwFetchFilteredLogicalPage(params, safePage, safePerPage);
+            }
+            return cwFetchTopCardsPageCached({
+              period: params.period,
+              top: params.top,
+              type: params.type,
+              min_rating: params.min_rating,
+              page: safePage,
+              per_page: safePerPage
+            }).then(function(pageData) {
+              return {
+                results: pageData.results,
+                page: pageData.page,
+                per_page: pageData.per_page,
+                total_pages: Math.max(1, pageData.total_pages || 1)
+              };
+            });
+          }
+          function cwFetchLineFirstPage(params, perPage) {
+            params = params || {};
+            var safePerPage = cwNormalizePerPage(perPage);
+            return cwFetchLogicalPage(params, 1, safePerPage).then(function(pageData) {
+              return {
+                results: pageData.results,
+                page: 1,
+                per_page: pageData.per_page,
+                total_pages: Math.max(1, pageData.total_pages || 1)
+              };
+            });
+          }
+          function cwApiLine(params, oncomplete, onerror) {
+            params = params || {};
+            var perPage = cwNormalizePerPage(params.per_page);
+            cwFetchLineFirstPage(params, perPage).then(oncomplete)["catch"](function() {
+              if (onerror) onerror();
+            });
+          }
+
+          function cwCreateLine(config, onDone) {
+            cwFetchLineFirstPage(config.query, CW_NATIVE_PER_PAGE).then(function(lineData) {
+              var results = lineData && Array.isArray(lineData.results) ? lineData.results : [];
+              if (!results.length) return onDone();
+              onDone({
+                title: config.displayTitle,
+                url: cwBuildLineUrl(Object.assign({}, config.query, { per_page: lineData.per_page })),
+                source: 'personal',
+                community_watches: true,
+                results: results,
+                total_pages: lineData.total_pages || 1,
+                nomore: (lineData.total_pages || 1) <= 1
+              });
+            })["catch"](function(e) {
+              console.warn('CommunityWatches', 'line load error', e);
+              onDone();
+            });
+          }
+
+          // Метод list — щоб Lampa могла догружати рядки спільноти при доскролі.
+          // Викликається для URL, який починається з 'v2/top'.
+          this.list = function(params, oncomplete, onerror) {
+            var url = params && params.url ? params.url : '';
+            var page = params && params.page ? params.page : 1;
+            if (url.indexOf('v2/top') === 0) {
+              var parsed = cwParseLineUrl(url);
+              var safePage = cwNormalizePage(page);
+              var perPage = cwNormalizePerPage(parsed.per_page);
+              cwFetchLogicalPage(parsed, safePage, perPage).then(function(paged) {
+                oncomplete(Object.assign({}, paged, {
+                  source: 'personal',
+                  url: cwBuildLineUrl(parsed)
+                }));
+              })["catch"](function(e) {
+                if (onerror) onerror(e);
+              });
+              return;
+            }
+            // Інакше — делегуємо базовому джерелу
+            if (baseSource && typeof baseSource.list === 'function') {
+              return baseSource.list.apply(baseSource, arguments);
+            }
+            if (oncomplete) oncomplete({ results: [], total_pages: 1 });
+          };
+
+          // Метод full / component — щоб можна було відкрити повний список.
+          this.full = function(params, oncomplete, onerror) {
+            var url = params && params.url ? params.url : '';
+            if (url.indexOf('v2/top') === 0) {
+              return this.list(params, oncomplete, onerror);
+            }
+            if (baseSource && typeof baseSource.full === 'function') {
+              return baseSource.full.apply(baseSource, arguments);
+            }
+          };
+
+          this.main = function() {
             var
               self3 = this,
               params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
@@ -82,6 +445,14 @@
               onError5 = arguments.length > 2 ? arguments[2] : undefined,
               partSize = 56,
               categoryList = [{
+                id: "community_top_week",
+                order: parseInt(Lampa.Storage.get('number_community_top_week'), 10) || 1,
+                active: !Lampa.Storage.get("community_top_week_remove")
+              }, {
+                id: "community_hidden_gems",
+                order: parseInt(Lampa.Storage.get('number_community_hidden_gems'), 10) || 2,
+                active: !Lampa.Storage.get("community_hidden_gems_remove")
+              }, {
                 id: "now_watch",
                 order: parseInt(Lampa.Storage.get('number_now_watch'), 10) || 3,
                 active: !Lampa.Storage.get("now_watch_remove")
@@ -230,6 +601,41 @@
             function loadHome(onComplete5, onError) {
               var
                 loaders = {
+                  community_top_week: function(onCommunityTopWeek) {
+                    var config = {
+                      displayTitle: Lampa.Lang.translate("Спільнота дивиться на тижні"),
+                      query: {
+                        period: '7d',
+                        top: 'desc',
+                        per_page: CW_NATIVE_PER_PAGE
+                      }
+                    };
+                    cwCreateLine(config, function(line) {
+                      if (line) {
+                        personalApplyDisplay(line, "community_top_week");
+                        if (Lampa.Storage.get('community_top_week_shuffle') == true) shuffle(line.results);
+                      }
+                      onCommunityTopWeek(line);
+                    });
+                  },
+                  community_hidden_gems: function(onCommunityHiddenGems) {
+                    var config = {
+                      displayTitle: Lampa.Lang.translate("Сховані геми спільноти"),
+                      query: {
+                        period: '7d',
+                        top: 'asc',
+                        min_rating: 7,
+                        per_page: CW_NATIVE_PER_PAGE
+                      }
+                    };
+                    cwCreateLine(config, function(line) {
+                      if (line) {
+                        personalApplyDisplay(line, "community_hidden_gems");
+                        if (Lampa.Storage.get('community_hidden_gems_shuffle') == true) shuffle(line.results);
+                      }
+                      onCommunityHiddenGems(line);
+                    });
+                  },
                   now_watch: function(onNowWatch) {
                     self3.get("movie/now_playing", params, function(nowWatchLine) {
                       nowWatchLine.title = Lampa.Lang.translate("title_now_watch"), personalApplyDisplay(nowWatchLine, "now_watch"), Lampa.Storage.get('now_watch_shuffle') == true && shuffle(nowWatchLine.results), onNowWatch(nowWatchLine);
@@ -381,443 +787,6 @@
             title: Lampa.Lang.translate("title_main") + ' - ' + Lampa.Storage.field("source").toUpperCase()
           }));
         }, 300);
-
-      // ============ COMMUNITY WATCHES (ContentRows, пагінація, кеш) ============
-      var CW_API_BASE_URL = 'https://wh.lme.isroot.in';
-      var CW_TOP_ENDPOINT = '/v2/top';
-      var CW_DEFAULT_PERIOD = '7d';
-      var CW_DEFAULT_TOP = 'desc';
-      var CW_CACHE_TTL = 1000 * 60 * 5;
-      var CW_TMDB_CACHE_LIFE = 60 * 24;
-      var CW_CONCURRENT_LOAD_LIMIT = 8;
-      var CW_NATIVE_PER_PAGE = 40;
-      var CW_MAX_PER_PAGE = 200;
-      var CW_STALE_CACHE_TTL_MS = 1000 * 60 * 60 * 6;
-      var CW_STORAGE_CACHE_PREFIX = 'community_watches_line_cache_v3_';
-      var cwPageCache = {};
-      var cwFilteredStateCache = {};
-
-      function cwNormalizeMinRating(value) {
-        var rating = parseFloat(value);
-        return Number.isFinite(rating) && rating > 0 ? rating : 0;
-      }
-      function cwNormalizePage(value) {
-        return Math.max(1, parseInt(value, 10) || 1);
-      }
-      function cwNormalizePerPage(value) {
-        var parsed = parseInt(value, 10) || CW_NATIVE_PER_PAGE;
-        return Math.max(1, Math.min(CW_MAX_PER_PAGE, parsed));
-      }
-      function cwCreateBaseQueryKey(params, perPage) {
-        params = params || {};
-        return [(params.type || ''), (params.period || CW_DEFAULT_PERIOD), (params.top || CW_DEFAULT_TOP), cwNormalizeMinRating(params.min_rating), cwNormalizePerPage(perPage)].join('|');
-      }
-      function cwCreatePageCacheKey(params, page, perPage) {
-        return cwCreateBaseQueryKey(params, perPage) + '|p=' + cwNormalizePage(page);
-      }
-      function cwParseTopId(rawId) {
-        if (typeof rawId !== 'string') return null;
-        var parsed = rawId.match(/^(movie|tv):(\d+)$/);
-        if (!parsed) return null;
-        return { type: parsed[1], id: parseInt(parsed[2], 10) };
-      }
-      function cwCacheGet(bucket, key) {
-        var now = Date.now();
-        var item = bucket[key];
-        if (item && now - item.time < CW_CACHE_TTL) return item.value;
-        return null;
-      }
-      function cwCacheSet(bucket, key, value) {
-        bucket[key] = { time: Date.now(), value: value };
-      }
-      function cwBuildTopUrl(params) {
-        params = params || {};
-        var query = new URLSearchParams();
-        query.set('period', params.period || CW_DEFAULT_PERIOD);
-        query.set('top', params.top || CW_DEFAULT_TOP);
-        query.set('page', String(cwNormalizePage(params.page)));
-        query.set('per_page', String(cwNormalizePerPage(params.per_page)));
-        if (params.type) query.set('type', params.type);
-        return CW_API_BASE_URL + CW_TOP_ENDPOINT + '?' + query.toString();
-      }
-      function cwParseLineUrl(url) {
-        var safeUrl = String(url || '');
-        var queryText = safeUrl.indexOf('?') >= 0 ? safeUrl.split('?')[1] : '';
-        var query = new URLSearchParams(queryText);
-        var top = query.get('top');
-        var period = query.get('period');
-        var type = query.get('type');
-        var minRating = cwNormalizeMinRating(query.get('min_rating'));
-        var perPage = cwNormalizePerPage(query.get('per_page'));
-        return {
-          top: top == 'asc' ? 'asc' : CW_DEFAULT_TOP,
-          period: period || CW_DEFAULT_PERIOD,
-          type: type == 'movie' || type == 'tv' ? type : '',
-          min_rating: minRating,
-          per_page: perPage
-        };
-      }
-      function cwBuildLineUrl(params) {
-        params = params || {};
-        var query = new URLSearchParams();
-        query.set('period', params.period || CW_DEFAULT_PERIOD);
-        query.set('top', params.top || CW_DEFAULT_TOP);
-        query.set('per_page', String(cwNormalizePerPage(params.per_page)));
-        if (params.type) query.set('type', params.type);
-        if (cwNormalizeMinRating(params.min_rating) > 0) query.set('min_rating', String(cwNormalizeMinRating(params.min_rating)));
-        return 'v2/top?' + query.toString();
-      }
-      function cwRequestTopPage(params) {
-        params = params || {};
-        var safePage = cwNormalizePage(params.page);
-        var safePerPage = cwNormalizePerPage(params.per_page);
-        return new Promise(function(resolve, reject) {
-          try {
-            Lampa.Network.silent(cwBuildTopUrl(params), function(json) {
-              if (Array.isArray(json)) {
-                return resolve({ items: json, page: safePage, per_page: safePerPage, total: json.length, total_pages: 1 });
-              }
-              if (json && Array.isArray(json.items)) {
-                return resolve({
-                  items: json.items,
-                  page: cwNormalizePage(json.page || safePage),
-                  per_page: cwNormalizePerPage(json.per_page || safePerPage),
-                  total: Math.max(0, parseInt(json.total, 10) || 0),
-                  total_pages: Math.max(1, parseInt(json.total_pages, 10) || 1)
-                });
-              }
-              resolve({ items: [], page: safePage, per_page: safePerPage, total: 0, total_pages: 1 });
-            }, reject);
-          } catch (e) { reject(e); }
-        });
-      }
-      function cwRequestTmdbCard(type, id) {
-        return new Promise(function(resolve) {
-          try {
-            if (!Lampa.Api || !Lampa.Api.sources || !Lampa.Api.sources.tmdb) return resolve(null);
-            Lampa.Api.sources.tmdb.get(type + '/' + id, {}, function(card) {
-              resolve(card || null);
-            }, function() { resolve(null); }, { life: CW_TMDB_CACHE_LIFE });
-          } catch (e) { resolve(null); }
-        });
-      }
-      function cwMapWithLimit(items, limit, mapItem) {
-        return new Promise(function(resolve) {
-          if (!items.length) return resolve([]);
-          var result = new Array(items.length);
-          var active = 0, index = 0, done = 0;
-          function next() {
-            if (done >= items.length && active === 0) return resolve(result);
-            var _loop = function() {
-              var currentIndex = index++;
-              active++;
-              Promise.resolve(mapItem(items[currentIndex], currentIndex)).then(function(value) {
-                result[currentIndex] = value || null;
-              })["catch"](function() {
-                result[currentIndex] = null;
-              })["finally"](function() {
-                active--; done++; next();
-              });
-            };
-            while (active < limit && index < items.length) _loop();
-          }
-          next();
-        });
-      }
-      function cwIsBelowMinRating(card, minRating) {
-        minRating = minRating || 0;
-        if (minRating <= 0) return false;
-        var voteCount = Number(card && card.vote_count || 0);
-        var voteAverage = Number(card && card.vote_average || 0);
-        if (voteCount <= 0) return false;
-        return voteAverage < minRating;
-      }
-      function cwMapApiItemsToCards(items, minRating) {
-        minRating = minRating || 0;
-        var parsed = items.map(function(item) {
-          var idInfo = cwParseTopId(item && item.id);
-          if (!idInfo) return null;
-          return {
-            type: idInfo.type,
-            id: idInfo.id,
-            requests_count: Number(item.requests_count || 0),
-            source_id: item.id
-          };
-        }).filter(Boolean);
-        if (!parsed.length) return Promise.resolve([]);
-        return cwMapWithLimit(parsed, CW_CONCURRENT_LOAD_LIMIT, function(entry) {
-          return cwRequestTmdbCard(entry.type, entry.id).then(function(card) {
-            if (!card) return null;
-            if (cwIsBelowMinRating(card, minRating)) return null;
-            card.community_watches_requests_count = entry.requests_count;
-            card.community_watches_source_id = entry.source_id;
-            return card;
-          });
-        }).then(function(cards) { return cards.filter(Boolean); });
-      }
-      function cwFetchTopCardsPage(params) {
-        params = params || {};
-        var safePage = cwNormalizePage(params.page);
-        var safePerPage = cwNormalizePerPage(params.per_page);
-        var minRating = cwNormalizeMinRating(params.min_rating);
-        return cwRequestTopPage({
-          period: params.period,
-          top: params.top,
-          type: params.type,
-          page: safePage,
-          per_page: safePerPage
-        }).then(function(payload) {
-          return cwMapApiItemsToCards(payload.items || [], minRating).then(function(results) {
-            return {
-              results: results,
-              page: payload.page,
-              per_page: payload.per_page,
-              total: payload.total,
-              total_pages: payload.total_pages
-            };
-          });
-        });
-      }
-      function cwFetchTopCardsPageCached(params) {
-        params = params || {};
-        var safePage = cwNormalizePage(params.page);
-        var safePerPage = cwNormalizePerPage(params.per_page);
-        var key = cwCreatePageCacheKey(params, safePage, safePerPage);
-        var cached = cwCacheGet(cwPageCache, key);
-        if (cached) return Promise.resolve(cached);
-        return cwFetchTopCardsPage({
-          period: params.period,
-          top: params.top,
-          type: params.type,
-          min_rating: params.min_rating,
-          page: safePage,
-          per_page: safePerPage
-        }).then(function(pageData) {
-          cwCacheSet(cwPageCache, key, pageData);
-          return pageData;
-        });
-      }
-      function cwGetFilteredState(params, perPage) {
-        params = params || {};
-        var key = cwCreateBaseQueryKey(params, perPage) + '|filtered';
-        var state = cwCacheGet(cwFilteredStateCache, key);
-        if (state) return state;
-        state = { items: [], next_server_page: 1, server_total_pages: 1, done: false };
-        cwCacheSet(cwFilteredStateCache, key, state);
-        return state;
-      }
-      function cwFetchFilteredLogicalPage(params, page, perPage) {
-        params = params || {};
-        var safePage = cwNormalizePage(page);
-        var safePerPage = cwNormalizePerPage(perPage);
-        var state = cwGetFilteredState(params, safePerPage);
-        var neededItems = safePage * safePerPage;
-
-        function loadNext() {
-          if (!(state.items.length < neededItems && !state.done)) return Promise.resolve();
-          return cwFetchTopCardsPageCached({
-            period: params.period,
-            top: params.top,
-            type: params.type,
-            min_rating: params.min_rating,
-            page: state.next_server_page,
-            per_page: safePerPage
-          }).then(function(pageData) {
-            state.server_total_pages = Math.max(1, pageData.total_pages || 1);
-            if (pageData.results.length) state.items = state.items.concat(pageData.results);
-            if (state.next_server_page >= state.server_total_pages) {
-              state.done = true;
-            } else {
-              state.next_server_page += 1;
-            }
-            return loadNext();
-          });
-        }
-
-        return loadNext().then(function() {
-          var from = (safePage - 1) * safePerPage;
-          var to = from + safePerPage;
-          var results = state.items.slice(from, to);
-          var totalPages = state.done ? Math.max(1, Math.ceil(state.items.length / safePerPage)) : safePage + 1;
-          return { results: results, page: safePage, per_page: safePerPage, total_pages: totalPages };
-        });
-      }
-      function cwFetchLogicalPage(params, page, perPage) {
-        params = params || {};
-        var safePage = cwNormalizePage(page);
-        var safePerPage = cwNormalizePerPage(perPage);
-        if (cwNormalizeMinRating(params.min_rating) > 0) {
-          return cwFetchFilteredLogicalPage(params, safePage, safePerPage);
-        }
-        return cwFetchTopCardsPageCached({
-          period: params.period,
-          top: params.top,
-          type: params.type,
-          min_rating: params.min_rating,
-          page: safePage,
-          per_page: safePerPage
-        }).then(function(pageData) {
-          return {
-            results: pageData.results,
-            page: pageData.page,
-            per_page: pageData.per_page,
-            total_pages: Math.max(1, pageData.total_pages || 1)
-          };
-        });
-      }
-      function cwFetchLineFirstPage(params, perPage) {
-        params = params || {};
-        var safePerPage = cwNormalizePerPage(perPage);
-        return cwFetchLogicalPage(params, 1, safePerPage).then(function(pageData) {
-          return {
-            results: pageData.results,
-            page: 1,
-            per_page: pageData.per_page,
-            total_pages: Math.max(1, pageData.total_pages || 1)
-          };
-        });
-      }
-      function cwApiLine(params, oncomplete, onerror) {
-        params = params || {};
-        var perPage = cwNormalizePerPage(params.per_page);
-        cwFetchLineFirstPage(params, perPage).then(oncomplete)["catch"](function() {
-          if (onerror) onerror();
-        });
-      }
-      function cwApiListByUrl(url, page, oncomplete, onerror) {
-        var parsed = cwParseLineUrl(url);
-        var safePage = cwNormalizePage(page);
-        var perPage = cwNormalizePerPage(parsed.per_page);
-        cwFetchLogicalPage(parsed, safePage, perPage).then(function(paged) {
-          oncomplete(Object.assign({}, paged, {
-            source: 'community_watches',
-            url: cwBuildLineUrl(parsed)
-          }));
-        })["catch"](function() {
-          if (onerror) onerror();
-        });
-      }
-
-      // Джерело для Lampa (щоб відкривати повний список)
-      var CWSource = {
-        list: function(params, oncomplete, onerror) {
-          cwApiListByUrl(params.url || '', params.page || 1, oncomplete, onerror);
-        }
-      };
-
-      // Кеш рядка в Lampa.Storage (6 годин)
-      function cwBuildRowCacheKey(config, screen) {
-        var q = config && config.query ? config.query : {};
-        var fp = [(q.period || ''), (q.top || ''), (q.type || ''), Number(q.min_rating || 0), Number(q.per_page || 0)].join('|');
-        return CW_STORAGE_CACHE_PREFIX + [(config && config.name ? config.name : 'unknown'), (screen || 'unknown'), fp].join('|');
-      }
-      function cwSaveLineToCache(cacheKey, line) {
-        if (!line || !line.results || !line.results.length) return;
-        if (!Lampa || !Lampa.Storage || typeof Lampa.Storage.set !== 'function') return;
-        try {
-          Lampa.Storage.set(cacheKey, { time: Date.now(), line: line });
-        } catch (err) {
-          console.warn('CommunityWatches', 'cache save error', err);
-        }
-      }
-      function cwLoadLineFromCache(cacheKey) {
-        if (!Lampa || !Lampa.Storage || typeof Lampa.Storage.get !== 'function') return null;
-        try {
-          var cached = Lampa.Storage.get(cacheKey);
-          var time = Number(cached && cached.time || 0);
-          var line = cached && cached.line;
-          if (!time || !line || !Array.isArray(line.results) || !line.results.length) return null;
-          if (Date.now() - time > CW_STALE_CACHE_TTL_MS) return null;
-          return line;
-        } catch (err) {
-          console.warn('CommunityWatches', 'cache load error', err);
-          return null;
-        }
-      }
-      function cwCreateLinePayload(config, lineData) {
-        var results = lineData && Array.isArray(lineData.results) ? lineData.results : [];
-        if (!results.length) return null;
-        return {
-          title: config.displayTitle,
-          url: cwBuildLineUrl(Object.assign({}, config.query, {
-            per_page: lineData && lineData.per_page
-          })),
-          source: 'community_watches',
-          community_watches: true,
-          community_watches_title: config.displayTitle,
-          results: results,
-          total_pages: lineData && lineData.total_pages ? lineData.total_pages : 1
-        };
-      }
-      function cwCreateCall(config) {
-        return function(params, screen) {
-          if (config.category && screen == 'category' && params.url !== config.category) return;
-          return function(call) {
-            var cacheKey = cwBuildRowCacheKey(config, screen);
-            var staleLine = cwLoadLineFromCache(cacheKey);
-            var done = false;
-            var finish = function(line) {
-              if (done) return;
-              done = true;
-              if (line && Array.isArray(line.results) && line.results.length) call(line);
-              else call();
-            };
-            cwApiLine(config.query, function(lineData) {
-              var line = cwCreateLinePayload(config, lineData);
-              if (line) cwSaveLineToCache(cacheKey, line);
-              if (!done) finish(line);
-            }, function() {
-              if (!done) finish(staleLine);
-            });
-          };
-        };
-      }
-      function cwRegisterRows() {
-        var rows = [{
-          name: 'CommunityWatchesMainHiddenGems',
-          title: 'Community watches · Головна · Сховані геми',
-          screen: ['main'],
-          index: 1,
-          displayTitle: 'Сховані геми спільноти',
-          query: { period: '7d', top: 'asc', min_rating: 7, per_page: CW_NATIVE_PER_PAGE }
-        }, {
-          name: 'CommunityWatchesMainWeeklyTop',
-          title: 'Community watches · Головна · Топ тижня',
-          screen: ['main'],
-          index: 0,
-          displayTitle: 'Спільнота дивиться на тижні',
-          query: { period: '7d', top: 'desc', per_page: CW_NATIVE_PER_PAGE }
-        }];
-        rows.forEach(function(row) {
-          Lampa.ContentRows.add({
-            name: row.name,
-            title: row.title,
-            index: row.index,
-            screen: row.screen,
-            call: cwCreateCall(row)
-          });
-        });
-      }
-      function cwInit() {
-        if (!Lampa.Api || !Lampa.Api.sources) return;
-        if (!Lampa.Api.sources.community_watches) {
-          Lampa.Api.sources.community_watches = CWSource;
-        }
-        cwRegisterRows();
-      }
-
-      // Реєструємо джерело одразу (щоб було доступне при відкритті повного списку)
-      if (Lampa.Api && Lampa.Api.sources) {
-        Lampa.Api.sources.community_watches = CWSource;
-      }
-
-      // Ініціалізація рядків — після готовності застосунку
-      if (window.appready) cwInit();
-      else Lampa.Listener.follow('app', function(e) {
-        if (e.type == 'ready') cwInit();
-      });
-      // ============ /COMMUNITY WATCHES ============
-
       Lampa.Settings.listener.follow('open', function(event3) {
         event3.name == "main" && (Lampa.Settings.main().render().find('[data-component="personal_source"]').length == 0 && Lampa.SettingsApi.addComponent({
           component: "personal_source",
@@ -985,7 +954,7 @@
           onChange: personalScheduleRefresh
         });
       }
-      addSetting('now_watch', "Зараз дивляться", "Натисни для налаштування", false, '1', '3', false), addSetting("trend_day", 'Сьогодні в тренді', 'Натисни для налаштування', false, '1', '5', false), addSetting("trend_day_tv", "Сьогодні в тренді (серіали)", "Натисни для налаштування", false, '1', '6', false), addSetting('trend_day_film', 'Сьогодні в тренді (фільми)', "Натисни для налаштування", false, '1', '7', false), addSetting('trend_week', "У тренді за тиждень", "Натисни для налаштування", false, '1', '8', false), addSetting("trend_week_tv", "У тренді за тиждень (серіали)", "Натисни для налаштування", false, '1', '9', false), addSetting("trend_week_film", "У тренді за тиждень (фільми)", "Натисни для налаштування", false, '1', '10', false), addSetting('upcoming', 'Скоро в кінотеатрах', "Натисни для налаштування", false, '1', '11', false), addSetting("popular_movie", "Популярні фільми", "Натисни для налаштування", false, '1', '12', false), addSetting("popular_tv", "Популярні серіали", 'Натисни для налаштування', false, '1', '13', false), addSetting("top_movie", "Топ фільми", "Натисни для налаштування", false, '4', '14', false), addSetting("top_tv", "Топ серіали", "Натисни для налаштування", false, '4', '15', false), addSetting("netflix", "Netflix", 'Натисни для налаштування', false, '1', '16', false), addSetting("apple_tv", "Apple TV+", "Натисни для налаштування", false, '1', '17', false), addSetting("prime_video", "Prime Video", "Натисни для налаштування", false, '1', '18', false), addSetting("mgm", "MGM+", "Натисни для налаштування", false, '1', '19', false), addSetting("hbo", "HBO", "Натисни для налаштування", false, '1', '20', false), addSetting('collections_inter_tv', 'Добірки зарубіжних серіалів', "Натисни для налаштування", false, '1', '34', false), addSetting("collections_inter_movie", 'Добірки зарубіжних фільмів', "Натисни для налаштування", false, '1', '36', false), Lampa.SettingsApi.addParam({
+      addSetting('community_top_week', "Спільнота дивиться на тижні", "Натисни для налаштування", false, '1', '1', false), addSetting('community_hidden_gems', "Сховані геми спільноти", "Натисни для налаштування", false, '1', '2', false), addSetting('now_watch', "Зараз дивляться", "Натисни для налаштування", false, '1', '3', false), addSetting("trend_day", 'Сьогодні в тренді', 'Натисни для налаштування', false, '1', '5', false), addSetting("trend_day_tv", "Сьогодні в тренді (серіали)", "Натисни для налаштування", false, '1', '6', false), addSetting('trend_day_film', 'Сьогодні в тренді (фільми)', "Натисни для налаштування", false, '1', '7', false), addSetting('trend_week', "У тренді за тиждень", "Натисни для налаштування", false, '1', '8', false), addSetting("trend_week_tv", "У тренді за тиждень (серіали)", "Натисни для налаштування", false, '1', '9', false), addSetting("trend_week_film", "У тренді за тиждень (фільми)", "Натисни для налаштування", false, '1', '10', false), addSetting('upcoming', 'Скоро в кінотеатрах', "Натисни для налаштування", false, '1', '11', false), addSetting("popular_movie", "Популярні фільми", "Натисни для налаштування", false, '1', '12', false), addSetting("popular_tv", "Популярні серіали", 'Натисни для налаштування', false, '1', '13', false), addSetting("top_movie", "Топ фільми", "Натисни для налаштування", false, '4', '14', false), addSetting("top_tv", "Топ серіали", "Натисни для налаштування", false, '4', '15', false), addSetting("netflix", "Netflix", 'Натисни для налаштування', false, '1', '16', false), addSetting("apple_tv", "Apple TV+", "Натисни для налаштування", false, '1', '17', false), addSetting("prime_video", "Prime Video", "Натисни для налаштування", false, '1', '18', false), addSetting("mgm", "MGM+", "Натисни для налаштування", false, '1', '19', false), addSetting("hbo", "HBO", "Натисни для налаштування", false, '1', '20', false), addSetting('collections_inter_tv', 'Добірки зарубіжних серіалів', "Натисни для налаштування", false, '1', '34', false), addSetting("collections_inter_movie", 'Добірки зарубіжних фільмів', "Натисни для налаштування", false, '1', '36', false), Lampa.SettingsApi.addParam({
         component: "personal_source",
         param: {
           name: "upcoming_episodes_remove",
@@ -1011,13 +980,13 @@
       var bootInterval = setInterval(function() {
         if (typeof Lampa !== "undefined") {
           clearInterval(bootInterval);
-          if (Lampa.Storage.get('personal_source_params') != "v4") initDefaults();
+          if (Lampa.Storage.get('personal_source_params') != "v5") initDefaults();
         }
       }, 200);
 
       function initDefaults() {
-        Lampa.Storage.set("personal_source_params", "v4");
-        ['trend_day_tv', 'trend_day_film', 'trend_week_tv', 'trend_week_film', 'netflix', 'apple_tv', 'prime_video', 'mgm', 'hbo', 'collections_inter_tv', 'collections_inter_movie'].forEach(function(id) {
+        Lampa.Storage.set("personal_source_params", "v5");
+        ['community_top_week', 'community_hidden_gems', 'trend_day_tv', 'trend_day_film', 'trend_week_tv', 'trend_week_film', 'netflix', 'apple_tv', 'prime_video', 'mgm', 'hbo', 'collections_inter_tv', 'collections_inter_movie'].forEach(function(id) {
           Lampa.Storage.set(id + "_remove", false);
         });
         Lampa.Storage.set("genres_cat", false);
@@ -1025,7 +994,7 @@
     }
     if (window.appready) init();
     else Lampa.Listener.follow("app", function(event5) {
-      event5.type == "ready" && init();
+      event5.type == 'ready' && init();
     });
   }());
 })();
