@@ -603,7 +603,7 @@
                 loaders = {
                   community_top_week: function(onCommunityTopWeek) {
                     var config = {
-                      displayTitle: Lampa.Lang.translate("Спільнота дивиться на тижні"),
+                      displayTitle: Lampa.Lang.translate("🇺🇦 Спільнота дивиться на тижні"),
                       query: {
                         period: '7d',
                         top: 'desc',
@@ -620,7 +620,7 @@
                   },
                   community_hidden_gems: function(onCommunityHiddenGems) {
                     var config = {
-                      displayTitle: Lampa.Lang.translate("Сховані геми спільноти"),
+                      displayTitle: Lampa.Lang.translate("🇺🇦 Сховані геми спільноти"),
                       query: {
                         period: '7d',
                         top: 'asc',
@@ -996,4 +996,4 @@
     else Lampa.Listener.follow("app", function(event5) {
       event5.type == 'ready' && init();
     });
-  }()); 
+  }());
