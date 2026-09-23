@@ -220,7 +220,7 @@
             var CW_TMDB_CACHE_LIFE = 60 * 24;
             var CW_CONCURRENT_LOAD_LIMIT = 8;
             var CW_NATIVE_PER_PAGE = 40;
-            var CW_MAX_SERVER_PAGES = 30;
+            var CW_MAX_SERVER_PAGES = 25;
             var cwPageCache = {};
 
             function cwNormalizeMinRating(value) {
