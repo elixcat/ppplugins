@@ -220,6 +220,7 @@
             var CW_TMDB_CACHE_LIFE = 60 * 24;
             var CW_CONCURRENT_LOAD_LIMIT = 8;
             var CW_NATIVE_PER_PAGE = 20;
+            var CW_MAX_SERVER_PAGES = 15;
             var cwPageCache = {};
 
             function cwNormalizeMinRating(value) {
@@ -447,9 +448,67 @@
               });
             }
 
+            // Логіка "логічної" сторінки: підвантажує серверні сторінки,
+            // доки не набереться достатньо карток, що пройшли фільтр min_rating.
+            function cwFetchFilteredLogicalPage(params, page, perPage) {
+              params = params || {};
+              var safePage = cwNormalizePage(page);
+              var safePerPage = cwNormalizePerPage(perPage);
+              var minRating = cwNormalizeMinRating(params.min_rating);
+              var collected = [];
+              var serverPage = 1;
+              var serverTotalPages = 1;
+              var emptyStreak = 0;
+
+              function loadNext() {
+                if (collected.length >= safePage * safePerPage) return Promise.resolve();
+                if (serverPage > serverTotalPages) return Promise.resolve();
+                if (serverPage > CW_MAX_SERVER_PAGES) return Promise.resolve();
+
+                return cwFetchTopCardsPageCached({
+                  period: params.period,
+                  top: params.top,
+                  type: params.type,
+                  min_rating: minRating,
+                  page: serverPage,
+                  per_page: safePerPage
+                }).then(function(pageData) {
+                  serverTotalPages = Math.max(1, pageData.total_pages || 1);
+                  if (pageData.results && pageData.results.length) {
+                    collected = collected.concat(pageData.results);
+                    emptyStreak = 0;
+                  } else {
+                    emptyStreak++;
+                    // якщо 3 серверні сторінки підряд пусті — зупиняємось
+                    if (emptyStreak >= 3) {
+                      serverPage = serverTotalPages + 1;
+                    }
+                  }
+                  serverPage++;
+                  return loadNext();
+                });
+              }
+
+              return loadNext().then(function() {
+                var from = (safePage - 1) * safePerPage;
+                var to = from + safePerPage;
+                var results = collected.slice(from, to);
+                return {
+                  results: results,
+                  page: safePage,
+                  per_page: safePerPage,
+                  total_pages: Math.max(1, Math.ceil(collected.length / safePerPage)),
+                  total: collected.length
+                };
+              });
+            }
+
             function cwFetchLineFirstPage(params, perPage) {
               params = params || {};
               var safePerPage = cwNormalizePerPage(perPage);
+              if (cwNormalizeMinRating(params.min_rating) > 0) {
+                return cwFetchFilteredLogicalPage(params, 1, safePerPage);
+              }
               return cwFetchTopCardsPageCached({
                 period: params.period,
                 top: params.top,
@@ -935,8 +994,8 @@
       }
     }
     if (window.appready) init();
-    else Lampa.Listener.follow("app", function(event5) {
-      event5.type == "ready" && init();
+    else Lampa.Listener.follow('app', function(event5) {
+      event5.type == 'ready' && init();
     });
   }());
 })();
