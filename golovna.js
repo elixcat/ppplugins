@@ -154,81 +154,13 @@
                 order: parseInt(Lampa.Storage.get('number_hbo'), 10) || 18,
                 active: !Lampa.Storage.get('hbo_remove')
               }, {
-                id: "dorams",
-                order: parseInt(Lampa.Storage.get("number_dorams"), 10) || 19,
-                active: !Lampa.Storage.get('dorams_remove')
-              }, {
-                id: "tur_serials",
-                order: parseInt(Lampa.Storage.get("number_tur_serials"), 10) || 20,
-                active: !Lampa.Storage.get("tur_serials_remove")
-              }, {
-                id: 'ind_films',
-                order: parseInt(Lampa.Storage.get("number_ind_films"), 10) || 21,
-                active: !Lampa.Storage.get("ind_films_remove")
-              }, {
-                id: 'rus_movie',
-                order: parseInt(Lampa.Storage.get("number_rus_movie"), 10) || 22,
-                active: !Lampa.Storage.get("rus_movie_remove")
-              }, {
-                id: "rus_tv",
-                order: parseInt(Lampa.Storage.get("number_rus_tv"), 10) || 23,
-                active: !Lampa.Storage.get("rus_tv_remove")
-              }, {
-                id: "rus_mult",
-                order: parseInt(Lampa.Storage.get('number_rus_mult'), 10) || 24,
-                active: !Lampa.Storage.get("rus_mult_remove")
-              }, {
-                id: "start",
-                order: parseInt(Lampa.Storage.get("number_start"), 10) || 25,
-                active: !Lampa.Storage.get("start_remove")
-              }, {
-                id: "premier",
-                order: parseInt(Lampa.Storage.get("number_premier"), 10) || 26,
-                active: !Lampa.Storage.get("premier_remove")
-              }, {
-                id: "kion",
-                order: parseInt(Lampa.Storage.get("number_kion"), 10) || 27,
-                active: !Lampa.Storage.get("kion_remove")
-              }, {
-                id: "ivi",
-                order: parseInt(Lampa.Storage.get("number_ivi"), 10) || 28,
-                active: !Lampa.Storage.get("ivi_remove")
-              }, {
-                id: "okko",
-                order: parseInt(Lampa.Storage.get('number_okko'), 10) || 29,
-                active: !Lampa.Storage.get('okko_remove')
-              }, {
-                id: 'kinopoisk',
-                order: parseInt(Lampa.Storage.get("number_kinopoisk"), 10) || 30,
-                active: !Lampa.Storage.get("kinopoisk_remove")
-              }, {
-                id: "wink",
-                order: parseInt(Lampa.Storage.get('number_wink'), 10) || 31,
-                active: !Lampa.Storage.get("wink_remove")
-              }, {
-                id: "sts",
-                order: parseInt(Lampa.Storage.get("number_sts"), 10) || 32,
-                active: !Lampa.Storage.get('sts_remove')
-              }, {
-                id: "tnt",
-                order: parseInt(Lampa.Storage.get("number_tnt"), 10) || 33,
-                active: !Lampa.Storage.get("tnt_remove")
-              }, {
                 id: "collections_inter_tv",
                 order: parseInt(Lampa.Storage.get("number_collections_inter_tv"), 10) || 34,
                 active: !Lampa.Storage.get('collections_inter_tv_remove')
               }, {
-                id: "collections_rus_tv",
-                order: parseInt(Lampa.Storage.get("number_collections_rus_tv"), 10) || 35,
-                active: !Lampa.Storage.get("collections_rus_tv_remove")
-              }, {
                 id: "collections_inter_movie",
                 order: parseInt(Lampa.Storage.get("number_collections_inter_movie"), 10) || 36,
                 active: !Lampa.Storage.get("collections_inter_movie_remove")
-              }, {
-                id: "collections_rus_movie",
-                order: parseInt(Lampa.Storage.get("number_collections_rus_movie"), 10) || 37,
-                active: !Lampa.Storage.get("collections_rus_movie_remove")
               }],
               usedIds = [];
 
@@ -321,12 +253,12 @@
                   },
                   trend_day_tv: function(onTrendDayTv) {
                     self3.get("trending/tv/day", params, function(trendDayTvLine) {
-                      trendDayTvLine.title = Lampa.Lang.translate("Сегодня в тренде (сериалы)"), personalApplyDisplay(trendDayTvLine, "trend_day_tv"), Lampa.Storage.get('trend_day_tv_shuffle') == true && shuffle(trendDayTvLine.results), onTrendDayTv(trendDayTvLine);
+                      trendDayTvLine.title = Lampa.Lang.translate("Сьогодні в тренді (серіали)"), personalApplyDisplay(trendDayTvLine, "trend_day_tv"), Lampa.Storage.get('trend_day_tv_shuffle') == true && shuffle(trendDayTvLine.results), onTrendDayTv(trendDayTvLine);
                     }, onTrendDayTv);
                   },
                   trend_day_film: function(onTrendDayFilm) {
                     self3.get("trending/movie/day", params, function(trendDayFilmLine) {
-                      trendDayFilmLine.title = Lampa.Lang.translate("Сегодня в тренде (фильмы)"), personalApplyDisplay(trendDayFilmLine, "trend_day_film"), Lampa.Storage.get("trend_day_film_shuffle") == true && shuffle(trendDayFilmLine.results), onTrendDayFilm(trendDayFilmLine);
+                      trendDayFilmLine.title = Lampa.Lang.translate("Сьогодні в тренді (фільми)"), personalApplyDisplay(trendDayFilmLine, "trend_day_film"), Lampa.Storage.get("trend_day_film_shuffle") == true && shuffle(trendDayFilmLine.results), onTrendDayFilm(trendDayFilmLine);
                     }, onTrendDayFilm);
                   },
                   trend_week: function(onTrendWeek) {
@@ -336,12 +268,12 @@
                   },
                   trend_week_tv: function(onTrendWeekTv) {
                     self3.get("trending/tv/week", params, function(trendWeekTvLine) {
-                      trendWeekTvLine.title = Lampa.Lang.translate("В тренде за неделю (сериалы)"), personalApplyDisplay(trendWeekTvLine, "trend_week_tv"), Lampa.Storage.get("trend_week_tv_shuffle") == true && shuffle(trendWeekTvLine.results), onTrendWeekTv(trendWeekTvLine);
+                      trendWeekTvLine.title = Lampa.Lang.translate("У тренді за тиждень (серіали)"), personalApplyDisplay(trendWeekTvLine, "trend_week_tv"), Lampa.Storage.get("trend_week_tv_shuffle") == true && shuffle(trendWeekTvLine.results), onTrendWeekTv(trendWeekTvLine);
                     }, onTrendWeekTv);
                   },
                   trend_week_film: function(onTrendWeekFilm) {
                     self3.get("trending/movie/week", params, function(trendWeekFilmLine) {
-                      trendWeekFilmLine.title = Lampa.Lang.translate('В тренде за неделю (фильмы)'), personalApplyDisplay(trendWeekFilmLine, "trend_week_film"), Lampa.Storage.get("trend_week_film_shuffle") == true && shuffle(trendWeekFilmLine.results), onTrendWeekFilm(trendWeekFilmLine);
+                      trendWeekFilmLine.title = Lampa.Lang.translate('У тренді за тиждень (фільми)'), personalApplyDisplay(trendWeekFilmLine, "trend_week_film"), Lampa.Storage.get("trend_week_film_shuffle") == true && shuffle(trendWeekFilmLine.results), onTrendWeekFilm(trendWeekFilmLine);
                     }, onTrendWeekFilm);
                   },
                   upcoming: function(onUpcoming) {
@@ -394,100 +326,15 @@
                       hboLine.title = Lampa.Lang.translate('HBO'), personalApplyDisplay(hboLine, "hbo"), Lampa.Storage.get("hbo_shuffle") == true && shuffle(hboLine.results), onHbo(hboLine);
                     }, onHbo);
                   },
-                  dorams: function(onDorams) {
-                    self3.get('discover/tv?first_air_date.gte=2020-01-01&without_genres=16&with_original_language=ko&vote_average.gte=6&vote_average.lte=10&first_air_date.lte=' + today, params, function(doramsLine) {
-                      doramsLine.title = Lampa.Lang.translate("Дорамы"), personalApplyDisplay(doramsLine, "dorams"), Lampa.Storage.get('dorams_shuffle') == true && shuffle(doramsLine.results), onDorams(doramsLine);
-                    }, onDorams);
-                  },
-                  tur_serials: function(onTurSerials) {
-                    self3.get("discover/tv?first_air_date.gte=2020-01-01&without_genres=16&with_original_language=tr&vote_average.gte=6&vote_average.lte=10&first_air_date.lte=" + today, params, function(turSerialsLine) {
-                      turSerialsLine.title = Lampa.Lang.translate("Турецкие сериалы"), personalApplyDisplay(turSerialsLine, "tur_serials"), Lampa.Storage.get('tur_serials_shuffle') == true && shuffle(turSerialsLine.results), onTurSerials(turSerialsLine);
-                    }, onTurSerials);
-                  },
-                  ind_films: function(onIndFilms) {
-                    self3.get('discover/movie?primary_release_date.gte=2020-01-01&without_genres=16&with_original_language=hi&vote_average.gte=6&vote_average.lte=10&first_air_date.lte=' + today, params, function(indFilmsLine) {
-                      indFilmsLine.title = Lampa.Lang.translate("Индийские фильмы"), personalApplyDisplay(indFilmsLine, "ind_films"), Lampa.Storage.get('ind_films_shuffle') == true && shuffle(indFilmsLine.results), onIndFilms(indFilmsLine);
-                    }, onIndFilms);
-                  },
-                  rus_movie: function(onRusMovie) {
-                    self3.get("discover/movie?vote_average.gte=5&vote_average.lte=9.5&with_original_language=ru&sort_by=primary_release_date.desc&primary_release_date.lte=" + new Date().toISOString().substr(0, 10), params, function(rusMovieLine) {
-                      rusMovieLine.title = Lampa.Lang.translate('Русские фильмы'), personalApplyDisplay(rusMovieLine, "rus_movie"), Lampa.Storage.get("rus_movi_shuffle") == true && shuffle(rusMovieLine.results), onRusMovie(rusMovieLine);
-                    }, onRusMovie);
-                  },
-                  rus_tv: function(onRusTv) {
-                    self3.get('discover/tv?with_original_language=ru&sort_by=first_air_date.desc&air_date.lte=' + today, params, function(rusTvLine) {
-                      rusTvLine.title = Lampa.Lang.translate("Русские сериалы"), personalApplyDisplay(rusTvLine, "rus_tv"), Lampa.Storage.get("rus_tv_shuffle") == true && shuffle(rusTvLine.results), onRusTv(rusTvLine);
-                    }, onRusTv);
-                  },
-                  rus_mult: function(onRusMult) {
-                    self3.get("discover/movie?vote_average.gte=5&vote_average.lte=9.5&with_genres=16&with_original_language=ru&sort_by=primary_release_date.desc&primary_release_date.lte=" + new Date().toISOString().substr(0, 10), params, function(rusMultLine) {
-                      rusMultLine.title = Lampa.Lang.translate("Русские мультфильмы"), personalApplyDisplay(rusMultLine, "rus_mult"), Lampa.Storage.get("rus_mult_shuffle") == true && shuffle(rusMultLine.results), onRusMult(rusMultLine);
-                    }, onRusMult);
-                  },
-                  start: function(onStart) {
-                    self3.get("discover/tv?with_networks=2493&sort_by=first_air_date.desc&air_date.lte=" + today, params, function(startLine) {
-                      startLine.title = Lampa.Lang.translate("Start"), personalApplyDisplay(startLine, "start"), Lampa.Storage.get('start_shuffle') == true && shuffle(startLine.results), onStart(startLine);
-                    }, onStart);
-                  },
-                  premier: function(onPremier) {
-                    self3.get('discover/tv?with_networks=2859&sort_by=first_air_date.desc&air_date.lte=' + today, params, function(premierLine) {
-                      premierLine.title = Lampa.Lang.translate("Premier"), personalApplyDisplay(premierLine, "premier"), Lampa.Storage.get("premier_shuffle") == true && shuffle(premierLine.results), onPremier(premierLine);
-                    }, onPremier);
-                  },
-                  kion: function(onKion) {
-                    self3.get("discover/tv?with_networks=4085&sort_by=first_air_date.desc&air_date.lte=" + today, params, function(kionLine) {
-                      kionLine.title = Lampa.Lang.translate("KION"), personalApplyDisplay(kionLine, "kion"), Lampa.Storage.get('kion_shuffle') == true && shuffle(kionLine.results), onKion(kionLine);
-                    }, onKion);
-                  },
-                  ivi: function(onIvi) {
-                    self3.get('discover/tv?with_networks=3923&sort_by=first_air_date.desc&air_date.lte=' + today, params, function(iviLine) {
-                      iviLine.title = Lampa.Lang.translate("IVI"), personalApplyDisplay(iviLine, "ivi"), Lampa.Storage.get("ivi_shuffle") == true && shuffle(iviLine.results), onIvi(iviLine);
-                    }, onIvi);
-                  },
-                  okko: function(onOkko) {
-                    self3.get("discover/tv?with_networks=3871&sort_by=first_air_date.desc&air_date.lte=" + today, params, function(okkoLine) {
-                      okkoLine.title = Lampa.Lang.translate("OKKO"), personalApplyDisplay(okkoLine, "okko"), Lampa.Storage.get('okko_shuffle') == true && shuffle(okkoLine.results), onOkko(okkoLine);
-                    }, onOkko);
-                  },
-                  kinopoisk: function(onKinopoisk) {
-                    self3.get("discover/tv?with_networks=3827&sort_by=first_air_date.desc&air_date.lte=" + today, params, function(kinopoiskLine) {
-                      kinopoiskLine.title = Lampa.Lang.translate('КиноПоиск'), personalApplyDisplay(kinopoiskLine, "kinopoisk"), Lampa.Storage.get("kinopois_shuffle") == true && shuffle(kinopoiskLine.results), onKinopoisk(kinopoiskLine);
-                    }, onKinopoisk);
-                  },
-                  wink: function(onWink) {
-                    self3.get("discover/tv?with_networks=5806&sort_by=first_air_date.desc&air_date.lte=" + today, params, function(winkLine) {
-                      winkLine.title = Lampa.Lang.translate('Wink'), personalApplyDisplay(winkLine, "wink"), Lampa.Storage.get("wink_shuffle") == true && shuffle(winkLine.results), onWink(winkLine);
-                    }, onWink);
-                  },
-                  sts: function(onSts) {
-                    self3.get('discover/tv?with_networks=806&sort_by=first_air_date.desc&air_date.lte=' + today, params, function(stsLine) {
-                      stsLine.title = Lampa.Lang.translate("СТС"), personalApplyDisplay(stsLine, "sts"), Lampa.Storage.get("sts_shuffle") == true && shuffle(stsLine.results), onSts(stsLine);
-                    }, onSts);
-                  },
-                  tnt: function(onTnt) {
-                    self3.get("discover/tv?with_networks=1191&sort_by=first_air_date.desc&air_date.lte=" + today, params, function(tntLine) {
-                      tntLine.title = Lampa.Lang.translate("ТНТ"), personalApplyDisplay(tntLine, "tnt"), Lampa.Storage.get("tnt_shuffle") == true && shuffle(tntLine.results), onTnt(tntLine);
-                    }, onTnt);
-                  },
                   collections_inter_tv: function(onCollectionsInterTv) {
                     self3.get('discover/tv?with_networks=213|2552|1024|6219|49&sort_by=' + sortTv + "&first_air_date.gte=" + tvDateFrom + "&first_air_date.lte=" + tvDateTo, params, function(collectionsInterTvLine) {
-                      collectionsInterTvLine.title = Lampa.Lang.translate('Подборки зарубежных сериалов'), personalApplyDisplay(collectionsInterTvLine, "collections_inter_tv"), Lampa.Storage.get('collections_inter_tv_shuffle') == true && shuffle(collectionsInterTvLine.results), onCollectionsInterTv(collectionsInterTvLine);
+                      collectionsInterTvLine.title = Lampa.Lang.translate('Добірки зарубіжних серіалів'), personalApplyDisplay(collectionsInterTvLine, "collections_inter_tv"), Lampa.Storage.get('collections_inter_tv_shuffle') == true && shuffle(collectionsInterTvLine.results), onCollectionsInterTv(collectionsInterTvLine);
                     }, onCollectionsInterTv);
-                  },
-                  collections_rus_tv: function(onCollectionsRusTv) {
-                    self3.get('discover/tv?with_networks=2493|2859|4085|3923|3871|3827|5806|806|1191&sort_by=' + sortTv + "&air_date.lte=" + tvDateTo + "&first_air_date.gte=" + tvDateFrom, params, function(collectionsRusTvLine) {
-                      collectionsRusTvLine.title = Lampa.Lang.translate("Подборки русских сериалов"), personalApplyDisplay(collectionsRusTvLine, "collections_rus_tv"), Lampa.Storage.get("collections_rus_tv_shuffle") == true && shuffle(collectionsRusTvLine.results), onCollectionsRusTv(collectionsRusTvLine);
-                    }, onCollectionsRusTv);
                   },
                   collections_inter_movie: function(onCollectionsInterMovie) {
                     self3.get("discover/movie?vote_average.gte=5&vote_average.lte=9.5&sort_by=" + sortMovie + "&primary_release_date.gte=" + movieDateFrom + "&primary_release_date.lte=" + movieDateTo, params, function(collectionsInterMovieLine) {
-                      collectionsInterMovieLine.title = Lampa.Lang.translate("Подборки зарубежных фильмов"), personalApplyDisplay(collectionsInterMovieLine, "collections_inter_movie"), Lampa.Storage.get('collections_inter_movie_shuffle') == true && shuffle(collectionsInterMovieLine.results), onCollectionsInterMovie(collectionsInterMovieLine);
+                      collectionsInterMovieLine.title = Lampa.Lang.translate("Добірки зарубіжних фільмів"), personalApplyDisplay(collectionsInterMovieLine, "collections_inter_movie"), Lampa.Storage.get('collections_inter_movie_shuffle') == true && shuffle(collectionsInterMovieLine.results), onCollectionsInterMovie(collectionsInterMovieLine);
                     }, onCollectionsInterMovie);
-                  },
-                  collections_rus_movie: function(onCollectionsRusMovie) {
-                    self3.get('discover/movie?primary_release_date.gte=' + movieDateFrom + '&vote_average.gte=5&vote_average.lte=9.5&with_original_language=ru&sort_by=' + sortMovie + "&primary_release_date.lte=" + movieDateTo, params, function(collectionsRusMovieLine) {
-                      collectionsRusMovieLine.title = Lampa.Lang.translate("Подборки русских фильмов"), personalApplyDisplay(collectionsRusMovieLine, "collections_rus_movie"), Lampa.Storage.get("collections_rus_movie_shuffle") == true && shuffle(collectionsRusMovieLine.results), onCollectionsRusMovie(collectionsRusMovieLine);
-                    }, onCollectionsRusMovie);
                   }
                 },
                 activeCategories = categoryList.filter(function(category) {
@@ -508,7 +355,7 @@
                   };
                   tasks.push(loadGenre), usedIds.push(genre.id);
                 }
-              }), tasks.length > 0 ? Lampa.Api.partNext(tasks, partSize, onComplete5, onError) : console.log("Нет доступных категорий для загрузки.");
+              }), tasks.length > 0 ? Lampa.Api.partNext(tasks, partSize, onComplete5, onError) : console.log("Немає доступних категорій для завантаження.");
             }
 
             function load(onComplete3, onError3) {
@@ -537,7 +384,7 @@
       Lampa.Settings.listener.follow('open', function(event3) {
         event3.name == "main" && (Lampa.Settings.main().render().find('[data-component="personal_source"]').length == 0 && Lampa.SettingsApi.addComponent({
           component: "personal_source",
-          name: "Источник Personal"
+          name: "Джерело Personal"
         }), Lampa.Settings.main().update(), Lampa.Settings.main().render().find("[data-component=\"personal_source\"]").addClass('hide'));
       }), Lampa.SettingsApi.addParam({
         component: "more",
@@ -547,12 +394,12 @@
           default: true
         },
         field: {
-          name: 'Источник Personal',
-          description: 'Настройки главного экрана'
+          name: 'Джерело Personal',
+          description: 'Налаштування головного екрану'
         },
         onRender: function(element5) {
           setTimeout(function() {
-            $(".settings-param > div:contains(\"Источник Personal\")").parent().insertAfter($("div[data-name=\"source\"]")), Lampa.Storage.field('source') !== 'personal' ? element5.hide() : element5.show();
+            $(".settings-param > div:contains(\"Джерело Personal\")").parent().insertAfter($("div[data-name=\"source\"]")), Lampa.Storage.field('source') !== 'personal' ? element5.hide() : element5.show();
           }, 20), element5.on('hover:enter', function() {
             Lampa.Settings.create("personal_source"), Lampa.Controller.enabled().controller.back = function() {
               Lampa.Settings.create('more');
@@ -561,7 +408,7 @@
         }
       }), Lampa.Storage.listener.follow('change', function(event) {
         event.name == "source" && setTimeout(function() {
-          Lampa.Storage.get("source") !== "personal" ? $('.settings-param > div:contains("Источник Personal")').parent().hide() : $(".settings-param > div:contains(\"Источник Personal\")").parent().show();
+          Lampa.Storage.get("source") !== "personal" ? $('.settings-param > div:contains("Джерело Personal")').parent().hide() : $(".settings-param > div:contains(\"Джерело Personal\")").parent().show();
         }, 50);
       });
 
@@ -651,7 +498,7 @@
             default: removeDefault
           },
           field: {
-            name: "Убрать с главной страницы"
+            name: "Прибрати з головної сторінки"
           },
           onChange: personalScheduleRefresh
         }), Lampa.SettingsApi.addParam({
@@ -661,14 +508,14 @@
             type: "select",
             values: {
               1: "Стандарт",
-              2: "Широкие маленькие",
-              3: "Широкие большие",
+              2: "Широкі маленькі",
+              3: "Широкі великі",
               4: "Top Line"
             },
             default: displayDefault
           },
           field: {
-            name: "Вид отображения"
+            name: "Вигляд відображення"
           },
           onChange: personalScheduleRefresh
         }), Lampa.SettingsApi.addParam({
@@ -718,7 +565,7 @@
             default: orderDefault
           },
           field: {
-            name: "Порядок отображения"
+            name: "Порядок відображення"
           },
           onChange: personalScheduleRefresh
         }), Lampa.SettingsApi.addParam({
@@ -729,12 +576,12 @@
             default: shuffleDefault
           },
           field: {
-            name: "Изменять порядок карточек на главной"
+            name: "Змінювати порядок карток на головній"
           },
           onChange: personalScheduleRefresh
         });
       }
-      addSetting('now_watch', "Сейчас смотрят", "Нажми для настройки", false, '1', '1', false), addSetting("trend_day", 'Сегодня в тренде', 'Нажми для настройки', false, '1', '3', false), addSetting("trend_day_tv", "Сегодня в тренде (сериалы)", "Нажми для настройки", false, '1', '4', false), addSetting('trend_day_film', 'Сегодня в тренде (фильмы)', "Нажми для настройки", false, '1', '5', false), addSetting('trend_week', "В тренде за неделю", "Нажми для настройки", false, '1', '6', false), addSetting("trend_week_tv", "В тренде за неделю (сериалы)", "Нажми для настройки", false, '1', '7', false), addSetting("trend_week_film", "В тренде за неделю (фильмы)", "Нажми для настройки", false, '1', '8', false), addSetting('upcoming', 'Смотрите в кинозалах', "Нажми для настройки", false, '1', '9', false), addSetting("popular_movie", "Популярные фильмы", "Нажми для настройки", false, '1', '10', false), addSetting("popular_tv", "Популярные сериалы", 'Нажми для настройки', false, '1', '11', false), addSetting("top_movie", "Топ фильмы", "Нажми для настройки", false, '4', '12', false), addSetting("top_tv", "Топ сериалы", "Нажми для настройки", false, '4', '13', false), addSetting("netflix", "Netflix", 'Нажми для настройки', false, '1', '14', false), addSetting("apple_tv", "Apple TV+", "Нажми для настройки", false, '1', '15', false), addSetting("prime_video", "Prime Video", "Нажми для настройки", false, '1', '16', false), addSetting("mgm", "MGM+", "Нажми для настройки", false, '1', '17', false), addSetting("hbo", "HBO", "Нажми для настройки", false, '1', '18', false), addSetting("dorams", "Дорамы", 'Нажми для настройки', false, '1', '19', false), addSetting("tur_serials", 'Турецкие сериалы', "Нажми для настройки", false, '1', '20', false), addSetting("ind_films", "Индийские фильмы", "Нажми для настройки", false, '1', '21', false), addSetting("rus_movie", "Русские фильмы", "Нажми для настройки", false, '1', '22', false), addSetting("rus_tv", "Русские сериалы", "Нажми для настройки", false, '1', '23', false), addSetting("rus_mult", "Русские мультфильмы", 'Нажми для настройки', false, '1', '24', false), addSetting('start', "Start", "Нажми для настройки", false, '1', '25', false), addSetting("premier", "Premier", "Нажми для настройки", false, '1', '26', false), addSetting("kion", "KION", "Нажми для настройки", false, '1', '27', false), addSetting("ivi", "ИВИ", 'Нажми для настройки', false, '1', '28', false), addSetting("okko", "Okko", "Нажми для настройки", false, '1', '29', false), addSetting("kinopoisk", "КиноПоиск", "Нажми для настройки", false, '1', '30', false), addSetting('wink', 'Wink', "Нажми для настройки", false, '1', '31', false), addSetting('sts', 'СТС', "Нажми для настройки", false, '1', '32', false), addSetting("tnt", "ТНТ", "Нажми для настройки", false, '1', '33', false), addSetting('collections_inter_tv', 'Подборки зарубежных сериалов', "Нажми для настройки", false, '1', '34', false), addSetting('collections_rus_tv', "Подборки русских сериалов", 'Нажми для настройки', false, '1', '35', false), addSetting("collections_inter_movie", 'Подборки зарубежных фильмов', "Нажми для настройки", false, '1', '36', false), addSetting("collections_rus_movie", 'Подборки русских фильмов', "Нажми для настройки", false, '1', '37', false), Lampa.SettingsApi.addParam({
+      addSetting('now_watch', "Зараз дивляться", "Натисни для налаштування", false, '1', '1', false), addSetting("trend_day", 'Сьогодні в тренді', 'Натисни для налаштування', false, '1', '3', false), addSetting("trend_day_tv", "Сьогодні в тренді (серіали)", "Натисни для налаштування", false, '1', '4', false), addSetting('trend_day_film', 'Сьогодні в тренді (фільми)', "Натисни для налаштування", false, '1', '5', false), addSetting('trend_week', "У тренді за тиждень", "Натисни для налаштування", false, '1', '6', false), addSetting("trend_week_tv", "У тренді за тиждень (серіали)", "Натисни для налаштування", false, '1', '7', false), addSetting("trend_week_film", "У тренді за тиждень (фільми)", "Натисни для налаштування", false, '1', '8', false), addSetting('upcoming', 'Скоро в кінотеатрах', "Натисни для налаштування", false, '1', '9', false), addSetting("popular_movie", "Популярні фільми", "Натисни для налаштування", false, '1', '10', false), addSetting("popular_tv", "Популярні серіали", 'Натисни для налаштування', false, '1', '11', false), addSetting("top_movie", "Топ фільми", "Натисни для налаштування", false, '4', '12', false), addSetting("top_tv", "Топ серіали", "Натисни для налаштування", false, '4', '13', false), addSetting("netflix", "Netflix", 'Натисни для налаштування', false, '1', '14', false), addSetting("apple_tv", "Apple TV+", "Натисни для налаштування", false, '1', '15', false), addSetting("prime_video", "Prime Video", "Натисни для налаштування", false, '1', '16', false), addSetting("mgm", "MGM+", "Натисни для налаштування", false, '1', '17', false), addSetting("hbo", "HBO", "Натисни для налаштування", false, '1', '18', false), addSetting('collections_inter_tv', 'Добірки зарубіжних серіалів', "Натисни для налаштування", false, '1', '34', false), addSetting("collections_inter_movie", 'Добірки зарубіжних фільмів', "Натисни для налаштування", false, '1', '36', false), Lampa.SettingsApi.addParam({
         component: "personal_source",
         param: {
           name: "upcoming_episodes_remove",
@@ -742,8 +589,8 @@
           default: false
         },
         field: {
-          name: "Выход ближайших эпизодов",
-          description: "Убрать с главной страницы"
+          name: "Вихід найближчих епізодів",
+          description: "Прибрати з головної сторінки"
         }
       }), Lampa.SettingsApi.addParam({
         component: 'personal_source',
@@ -753,8 +600,8 @@
           default: false
         },
         field: {
-          name: "Подборки по жанрам",
-          description: "Убрать с главной страницы"
+          name: "Добірки за жанрами",
+          description: "Прибрати з головної сторінки"
         }
       });
       var bootInterval = setInterval(function() {
@@ -766,7 +613,7 @@
 
       function initDefaults() {
         Lampa.Storage.set("personal_source_params", "v2");
-        ['trend_day_tv', 'trend_day_film', 'trend_week_tv', 'trend_week_film', 'netflix', 'apple_tv', 'prime_video', 'mgm', 'hbo', 'dorams', 'tur_serials', 'ind_films', 'rus_movie', 'rus_tv', 'rus_mult', 'start', 'premier', 'kion', 'ivi', 'okko', 'kinopoisk', 'wink', 'sts', 'tnt', 'collections_inter_tv', 'collections_rus_tv', 'collections_inter_movie', 'collections_rus_movie'].forEach(function(id) {
+        ['trend_day_tv', 'trend_day_film', 'trend_week_tv', 'trend_week_film', 'netflix', 'apple_tv', 'prime_video', 'mgm', 'hbo', 'collections_inter_tv', 'collections_inter_movie'].forEach(function(id) {
           Lampa.Storage.set(id + "_remove", false);
         });
         Lampa.Storage.set("genres_cat", false);
