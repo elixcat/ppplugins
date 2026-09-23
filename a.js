@@ -155,7 +155,6 @@
 			cache_time: CACHE_TIME
 		};
 
-		// --- крок 1: перевірка кешу ---
 		function checkCacheOrLoad() {
 			const cached = getCachedRating(config.id);
 			if (cached) {
@@ -165,7 +164,6 @@
 			}
 		}
 
-		// --- крок 2: запит до API ---
 		function loadFromApi() {
 			let url = config.url;
 
@@ -227,7 +225,6 @@
 			);
 		}
 
-		// --- крок 3: фільтрація знайдених елементів ---
 		function processItems(items) {
 			if (!items || !items.length) {
 				return renderRating(saveRatingToCache(config.id, {
@@ -320,19 +317,17 @@
 				}
 			}
 
-			// --- крок 4: отримання рейтингів ---
 			if (list.length === 1 && matched) {
 				const kpId = list[0].filmId ||
 					list[0].kinopoiskId ||
 					list[0].kinopoisk_id ||
 					list[0].kp_id;
 
-				// запасний варіант — через API v2.2 (як в оригіналі)
 				const loadViaApi = function () {
 					request.clear();
 					request.timeout(15000);
 					request.silent(
-						config.rating_url + 'api/v2.2/films/' + kpId,
+						API_BASE + 'api/v2.2/films/' + kpId,  // <-- ЗМІНА: було config.rating_url
 						function (json) {
 							const data = saveRatingToCache(config.id, {
 								kp: json.ratingKinopoisk,
