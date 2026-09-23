@@ -1,5 +1,3 @@
-'use strict';
-
 (function () {
     // === ПОЧАТОК: Перевірка наявності Lampa ===
     if (typeof Lampa === 'undefined') {
