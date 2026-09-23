@@ -996,5 +996,4 @@
     else Lampa.Listener.follow("app", function(event5) {
       event5.type == 'ready' && init();
     });
-  }());
-})();
+  }()); 
