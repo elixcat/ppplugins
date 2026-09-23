@@ -12,46 +12,6 @@
 	const CACHE_TIME = 60 * 60 * 24 * 1000; // 24 години
 
 	// ============================================================
-	// ФЕЙКОВІ АНТИДЕБАГ-ФУНКЦІЇ
-	// (в оригіналі вони є, але нічого корисного не роблять —
-	// лише підмінюють console і самі себе перевіряють)
-	// ============================================================
-
-	const _0x56b872 = (function () {
-		let first = true;
-		return function (ctx, fn) {
-			const wrapper = first
-				? function () {
-					if (fn) {
-						const result = fn.apply(ctx, arguments);
-						fn = null;
-						return result;
-					}
-				}
-				: function () {};
-			first = false;
-			return wrapper;
-		};
-	})();
-
-	const _0x2d4be9 = (function () {
-		let first = true;
-		return function (ctx, fn) {
-			const wrapper = first
-				? function () {
-					if (fn) {
-						const result = fn.apply(ctx, arguments);
-						fn = null;
-						return result;
-					}
-				}
-				: function () {};
-			first = false;
-			return wrapper;
-		};
-	})();
-
-	// ============================================================
 	// УТИЛІТИ ДЛЯ РОБОТИ З РЯДКАМИ
 	// ============================================================
 
@@ -235,7 +195,6 @@
 						processItems(json.films);
 					} else {
 						if (url !== searchUrl) {
-							// повторний запит — вже по назві
 							request.clear();
 							request.timeout(15000);
 							request.silent(
@@ -281,7 +240,6 @@
 			let matched = false;
 			let byImdb = false;
 
-			// додаємо tmp_year кожному елементу
 			items.forEach(function (item) {
 				const date = item.start_date ||
 					item.release_date ||
@@ -289,7 +247,6 @@
 				item.tmp_year = parseInt((date + '').slice(0, 4));
 			});
 
-			// спочатку шукаємо точний збіг по imdb_id
 			if (movie.imdb_id) {
 				const byImdbList = items.filter(function (item) {
 					return (item.imdb_id || item.imdbId) === movie.imdb_id;
@@ -304,7 +261,6 @@
 			let list = items;
 
 			if (list.length) {
-				// фільтр по оригінальній назві
 				if (originalName) {
 					const byOriginal = list.filter(function (item) {
 						return titleIncludes(item.nameOriginal || item.orig_title, originalName) ||
@@ -317,7 +273,6 @@
 					}
 				}
 
-				// фільтр по локалізованій назві
 				if (movie.title) {
 					const byTitle = list.filter(function (item) {
 						return titleIncludes(item.title || item.ru_title || item.nameRu, movie.title) ||
@@ -330,7 +285,6 @@
 					}
 				}
 
-				// фільтр по року
 				if (list.length > 1 && year) {
 					let byYear = list.filter(function (item) {
 						return item.year === year;
@@ -346,7 +300,6 @@
 				}
 			}
 
-			// додаткова перевірка, якщо лишився 1 елемент
 			if (list.length === 1 && matched && !byImdb) {
 				if (year && list[0].tmp_year) {
 					matched = list[0].tmp_year > year - 2 &&
@@ -374,13 +327,12 @@
 					list[0].kinopoisk_id ||
 					list[0].kp_id;
 
-				// запасний варіант — через API v2.2
+				// запасний варіант — через API v2.2 (як в оригіналі)
 				const loadViaApi = function () {
 					request.clear();
 					request.timeout(15000);
 					request.silent(
-						config.rating_url.replace(RATING_BASE, API_BASE) +
-							'api/v2.2/films/' + kpId,
+						config.rating_url + 'api/v2.2/films/' + kpId,
 						function (json) {
 							const data = saveRatingToCache(config.id, {
 								kp: json.ratingKinopoisk,
@@ -397,7 +349,6 @@
 					);
 				};
 
-				// спочатку пробуємо XML з rating.kinopoisk.ru
 				request.clear();
 				request.timeout(5000);
 				request.silent(
@@ -422,9 +373,7 @@
 									timestamp: Date.now()
 								});
 								return renderRating(data);
-							} catch (e) {
-								// ігноруємо помилку парсингу
-							}
+							} catch (e) {}
 						}
 						loadViaApi();
 					},
@@ -451,47 +400,8 @@
 	// ============================================================
 
 	function initPlugin() {
-		// антидебаг-заглушки (як в оригіналі)
-		(function () {
-			const check = _0x56b872(this, function () {
-				return check.toString()
-					.search('(((.+)+)+)+$')
-					.toString()
-					.constructor(check)
-					.search('(((.+)+)+)+$');
-			});
-			check();
-		})();
-
-		(function () {
-			const check = _0x2d4be9(this, function () {
-				let global;
-				try {
-					const fn = Function('return (function() {}.constructor("return this")( );');
-					global = fn();
-				} catch (e) {
-					global = window;
-				}
-
-				const consoleObj = global.console = global.console || {};
-				const methods = ['log', 'warn', 'info', 'error', 'exception', 'table', 'trace'];
-
-				for (let i = 0; i < methods.length; i++) {
-					const wrapper = _0x2d4be9.constructor.prototype.bind(_0x2d4be9);
-					const name = methods[i];
-					const original = consoleObj[name] || wrapper;
-					wrapper.__proto__ = _0x2d4be9.bind(_0x2d4be9);
-					wrapper.toString = original.toString.bind(original);
-					consoleObj[name] = wrapper;
-				}
-			});
-			check();
-		})();
-
-		// перевірка на повторний запуск
 		window.rating_plugin = true;
 
-		// слухаємо відкриття картки
 		Lampa.Listener.follow('activity', function (e) {
 			if (e.type === 'movie') {
 				const html = e.activity.render();
@@ -502,14 +412,12 @@
 
 				if (isHidden || hasWait) return;
 
-				// вставляємо спінер
 				$root.find('.info__rate').after(
 					'<div style="width:2em;margin-top:1em;margin-right:1em" class="wait_rating">' +
 					'<div class="broadcast__scan"><div></div></div>' +
 					'<div>'
 				);
 
-				// запускаємо пошук рейтингу
 				findFilmRating(e.data.movie);
 			}
 		});
