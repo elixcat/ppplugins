@@ -68,7 +68,7 @@
 			url: kp_prox + 'https://kinopoiskapiunofficial.tech/',
 			rating_url: kp_prox + 'https://rating.kinopoisk.ru/',
 			headers: {
-				'X-API-KEY': '7bac784b-ea8f-45b3-8e1f-b099ca4d7b6b'
+				'X-API-KEY': '911eced7-0d61-4a65-a645-559315040bd0'
 			},
 			cache_time: 60 * 60 * 24 * 1000 //86400000 сек = 1день Время кэша в секундах
 		};
