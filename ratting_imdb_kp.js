@@ -57,18 +57,12 @@
 	}
 
 	// ====== МЕНЕДЖЕР API-КЛЮЧІВ ======
-	var KP_API_KEYS_ENC = [
-		[85, 5, 121, 113, 108, 123, 87, 24, 11, 122, 46, 124, 23, 57, 34, 21, 65, 23, 87, 94, 64, 6, 60, 52, 14, 33, 64, 79, 37, 92, 95, 6, 120, 42, 18, 32],
-		[85, 5, 121, 113, 108, 123, 87, 24, 11, 107, 22, 57, 65, 33, 89, 46, 32, 106, 67, 89, 38, 6, 7, 19, 90, 1, 26, 14, 26, 71, 15, 4, 44, 33, 4, 2]
+	var KP_API_KEYS = [
+		'a4e6ec87-6d85-4b17-b45a-0978b62c42fa',
+		'7bac784b-ea8f-45b3-8e1f-b099ca4d7b6b'
 	];
-	var KP_API_KEYS_SECRET = atob('X0tQM3Bhc3N3b3Jk');
 	var KP_LIMIT_PER_KEY = 500;
-
-	function kpGetKeys() {
-		return KP_API_KEYS_ENC.map(function (arr) {
-			return decodeSecret(arr, KP_API_KEYS_SECRET);
-		});
-	}
+	var kp_current_index = 0;
 
 	function kpToday() {
 		var d = new Date();
@@ -78,11 +72,10 @@
 	}
 
 	function kpGetUsage() {
-		var keys = kpGetKeys();
 		var stored = Lampa.Storage.get('kp_api_usage', null);
 		var today = kpToday();
-		if (!stored || stored.date !== today || !Array.isArray(stored.counts) || stored.counts.length !== keys.length) {
-			return { date: today, counts: keys.map(function () { return 0; }) };
+		if (!stored || stored.date !== today || !Array.isArray(stored.counts) || stored.counts.length !== KP_API_KEYS.length) {
+			return { date: today, counts: KP_API_KEYS.map(function () { return 0; }) };
 		}
 		return stored;
 	}
@@ -92,18 +85,18 @@
 	}
 
 	function kpGetNextKey() {
-		var keys = kpGetKeys();
 		var usage = kpGetUsage();
-		var best = -1;
-		for (var i = 0; i < keys.length; i++) {
-			if (usage.counts[i] < KP_LIMIT_PER_KEY) {
-				if (best === -1 || usage.counts[i] < usage.counts[best]) best = i;
+		// шукаємо наступний доступний ключ, починаючи з поточного індексу
+		for (var i = 0; i < KP_API_KEYS.length; i++) {
+			var idx = (kp_current_index + i) % KP_API_KEYS.length;
+			if (usage.counts[idx] < KP_LIMIT_PER_KEY) {
+				kp_current_index = (idx + 1) % KP_API_KEYS.length;
+				usage.counts[idx]++;
+				kpSaveUsage(usage);
+				return KP_API_KEYS[idx];
 			}
 		}
-		if (best === -1) return null;
-		usage.counts[best]++;
-		kpSaveUsage(usage);
-		return keys[best];
+		return null; // усі ключі вичерпані
 	}
 
 	function kpWithKey(baseHeaders) {
