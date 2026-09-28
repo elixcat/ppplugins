@@ -56,59 +56,6 @@
 		return res;
 	}
 
-	// ====== МЕНЕДЖЕР API-КЛЮЧІВ ======
-	var KP_API_KEYS = [
-		'a4e6ec87-6d85-4b17-b45a-0978b62c42fa',
-		'7bac784b-ea8f-45b3-8e1f-b099ca4d7b6b'
-	];
-	var KP_LIMIT_PER_KEY = 500;
-	var kp_current_index = 0;
-
-	function kpToday() {
-		var d = new Date();
-		var m = (d.getMonth() + 1);
-		var day = d.getDate();
-		return d.getFullYear() + '-' + (m < 10 ? '0' + m : m) + '-' + (day < 10 ? '0' + day : day);
-	}
-
-	function kpGetUsage() {
-		var stored = Lampa.Storage.get('kp_api_usage', null);
-		var today = kpToday();
-		if (!stored || stored.date !== today || !Array.isArray(stored.counts) || stored.counts.length !== KP_API_KEYS.length) {
-			return { date: today, counts: KP_API_KEYS.map(function () { return 0; }) };
-		}
-		return stored;
-	}
-
-	function kpSaveUsage(u) {
-		Lampa.Storage.set('kp_api_usage', u);
-	}
-
-	function kpGetNextKey() {
-		var usage = kpGetUsage();
-		// шукаємо наступний доступний ключ, починаючи з поточного індексу
-		for (var i = 0; i < KP_API_KEYS.length; i++) {
-			var idx = (kp_current_index + i) % KP_API_KEYS.length;
-			if (usage.counts[idx] < KP_LIMIT_PER_KEY) {
-				kp_current_index = (idx + 1) % KP_API_KEYS.length;
-				usage.counts[idx]++;
-				kpSaveUsage(usage);
-				return KP_API_KEYS[idx];
-			}
-		}
-		return null; // усі ключі вичерпані
-	}
-
-	function kpWithKey(baseHeaders) {
-		var key = kpGetNextKey();
-		if (!key) return null;
-		var h = {};
-		if (baseHeaders) for (var k in baseHeaders) h[k] = baseHeaders[k];
-		h['X-API-KEY'] = key;
-		return h;
-	}
-	// ==================================
-
 	function rating_kp_imdb(card) {
 		var network = new Lampa.Reguest();
 		var clean_title = kpCleanTitle(card.title);
@@ -120,7 +67,9 @@
 			id: card.id,
 			url: kp_prox + 'https://kinopoiskapiunofficial.tech/',
 			rating_url: kp_prox + 'https://rating.kinopoisk.ru/',
-			headers: {},
+			headers: {
+				'X-API-KEY': '7bac784b-ea8f-45b3-8e1f-b099ca4d7b6b'
+			},
 			cache_time: 60 * 60 * 24 * 1000 //86400000 сек = 1день Время кэша в секундах
 		};
 		getRating();
@@ -139,24 +88,12 @@
 			var url_by_title = Lampa.Utils.addUrlComponent(url + 'api/v2.1/films/search-by-keyword', 'keyword=' + encodeURIComponent(clean_title));
 			if (card.imdb_id) url = Lampa.Utils.addUrlComponent(url + 'api/v2.2/films', 'imdbId=' + encodeURIComponent(card.imdb_id));
 			else url = url_by_title;
-
-			var headers = kpWithKey(params.headers);
-			if (!headers) {
-				showError('API keys exhausted');
-				return;
-			}
-
 			network.clear();
 			network.timeout(15000);
 			network.silent(url, function (json) {
 				if (json.items && json.items.length) chooseFilm(json.items);
 				else if (json.films && json.films.length) chooseFilm(json.films);
 				else if (url !== url_by_title) {
-					var headers2 = kpWithKey(params.headers);
-					if (!headers2) {
-						showError('API keys exhausted');
-						return;
-					}
 					network.clear();
 					network.timeout(15000);
 					network.silent(url_by_title, function (json) {
@@ -166,13 +103,13 @@
 					}, function (a, c) {
 						showError(network.errorDecode(a, c));
 					}, false, {
-						headers: headers2
+						headers: params.headers
 					});
 				} else chooseFilm([]);
 			}, function (a, c) {
 				showError(network.errorDecode(a, c));
 			}, false, {
-				headers: headers
+				headers: params.headers
 			});
 		}
 
@@ -241,11 +178,6 @@
 				if (cards.length == 1 && is_sure) {
 					var id = cards[0].kp_id || cards[0].kinopoisk_id || cards[0].kinopoiskId || cards[0].filmId;
 					var base_search = function base_search() {
-						var headers = kpWithKey(params.headers);
-						if (!headers) {
-							showError('API keys exhausted');
-							return;
-						}
 						network.clear();
 						network.timeout(15000);
 						network.silent(params.url + 'api/v2.2/films/' + id, function (data) {
@@ -258,7 +190,7 @@
 						}, function (a, c) {
 							showError(network.errorDecode(a, c));
 						}, false, {
-							headers: headers
+							headers: params.headers
 						});
 					};
 					network.clear();
@@ -339,6 +271,7 @@
 			var cache = Lampa.Storage.cache('kp_rating', 500, {}); //500 это лимит ключей
 			if (cache[movie]) {
 				if ((timestamp - cache[movie].timestamp) > params.cache_time) {
+					// Если кеш истёк, чистим его
 					delete cache[movie];
 					Lampa.Storage.set('kp_rating', cache);
 					return false;
