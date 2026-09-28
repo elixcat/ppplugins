@@ -1020,7 +1020,7 @@
         var am = ak.find("> div");
         if (am.length >= 0x2) {
           am.eq(0x0).text(al.toFixed(0x1));
-          am.eq(0x1).addClass("source--name").html("<img style=\"width:auto; display:inline-block; vertical-align:middle; object-fit:contain; " + (undefined || '') + " " + "\" " + "src=\"" + "https://raw.githubusercontent.com/elixcat/ppplugins/imdb.svg" + "\" alt=\"" + ("IMDb" || '') + "\">");
+          am.eq(0x1).addClass("source--name").html("<img style=\"width:auto; display:inline-block; vertical-align:middle; object-fit:contain; " + (undefined || '') + " " + "\" " + "src=\"" + "https://elixcat.github.io/ppplugins/imdb.svg" + "\" alt=\"" + ("IMDb" || '') + "\">");
         }
         ak.removeClass("rating--green rating--blue rating--orange rating--red");
         if (aj.colorizeAll && ad.imdb_for_avg) {
