@@ -70,7 +70,7 @@
 			headers: {
 				'X-API-KEY': atob('OTExZWNlZDctMGQ2MS00YTY1LWE2NDUtNTU5MzE1MDQwYmQw')
 			},
-			cache_time: 60 * 60 * 72 * 1000 //259200000 мс = 3 доби
+			cache_time: 60 * 60 * 48 * 1000 //2 доби
 		};
 		getRating();
 
