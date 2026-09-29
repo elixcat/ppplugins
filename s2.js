@@ -887,12 +887,17 @@ window.rch_nws[hostkey].Registry = function RchRegistry(client, startConnection)
         url += (url.indexOf('?') === -1 ? '?' : '&') + 'rchtype=' + ((window.rch_nws && window.rch_nws[hostkey] ? window.rch_nws[hostkey].type : window.rch && window.rch[hostkey] ? window.rch[hostkey].type : '') || '');
       network.silent(url, function(data) {
         if (data.channels) {
-          menu = data.channels;
-          success(menu);
-        } else {
-          error(data.msg);
-        }
-      }, error);
+         // Ховаємо youjizz з меню і з «Все»
+        menu = data.channels.filter(function(m) {
+      var title = (m.title || '').toLowerCase();
+      var url   = (m.playlist_url || '').toLowerCase();
+      return title.indexOf('youjizz') === -1 && url.indexOf('youjizz') === -1;
+    });
+    success(menu);
+  } else {
+    error(data.msg);
+  }
+}, error);
     };
 
     this.view = function(params, success, error, waiting_rch) {
