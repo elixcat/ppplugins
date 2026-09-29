@@ -17,7 +17,7 @@
     lampac_sisiname: {
       ru: 'Клубничка',
       en: 'Strawberry',
-      uk: 'Полуничка',
+      uk: 'Троскавка',
       zh: '草莓'
     }
   });
@@ -443,22 +443,52 @@ window.rch_nws[hostkey].Registry = function RchRegistry(client, startConnection)
     return list;
   }
 
-  function menu$2(target, card_data) {
-    if (!card_data.bookmark) return;
-    var cm = [{
-      title: !card_data.bookmark.uid ? 'В закладки' : 'Удалить из закладок'
-    }];
+function menu$2(target, card_data) {
+    if (!card_data.bookmark && !card_data.video) return;
+
+    var cm = [];
+
+    // Звичайні закладки сервера (якщо є bookmark)
+    if (card_data.bookmark) {
+      cm.push({
+        title: !card_data.bookmark.uid ? 'В закладки' : 'Видалити з закладок',
+        server_bookmark: true
+      });
+    }
+
+    // ── Папки ──
+    cm.push({
+      title: 'В нову папку',
+      new_folder: true
+    });
+
+    var myFolders = foldersList();
+    myFolders.forEach(function (f) {
+      cm.push({
+        title: '📁 ' + f.title,
+        folder_id: f.id
+      });
+    });
+
+    // Якщо відео відкрите з папки — можна прибрати з неї
+    if (card_data.sisi_folder_id) {
+      cm.push({
+        title: 'Видалити з цієї папки',
+        remove_from_folder: true,
+        folder_id: card_data.sisi_folder_id
+      });
+    }
 
     if (card_data.history_uid) {
       cm.push({
-        title: 'Удалить из истории',
+        title: 'Видалити з історії',
         history: true
       });
     }
 
     if (card_data.related) {
       cm.push({
-        title: 'Похожие',
+        title: 'Схожі',
         related: true
       });
     }
@@ -472,7 +502,7 @@ window.rch_nws[hostkey].Registry = function RchRegistry(client, startConnection)
 
     if (Lampa.Platform.is('android') && Lampa.Storage.field('player') !== 'inner') {
       cm.push({
-        title: 'Плеер Lampa',
+        title: 'Плеєр Lampa',
         lampaplayer: true
       });
     }
@@ -481,7 +511,37 @@ window.rch_nws[hostkey].Registry = function RchRegistry(client, startConnection)
       title: 'Меню',
       items: cm,
       onSelect: function onSelect(m) {
-        if (m.model) {
+        if (m.new_folder) {
+          // Створити нову папку
+          Lampa.Input.edit(
+            {
+              title: 'Назва папки',
+              value: '',
+              free: true,
+              nosave: true
+            },
+            function (value) {
+              Lampa.Controller.toggle('content');
+              if (value && value.trim()) {
+                var id = folderCreate(value.trim());
+                folderAddVideo(id, card_data);
+                Lampa.Noty.show('Створено «' + value.trim() + '» і додано відео');
+              }
+            }
+          );
+        } else if (m.folder_id && m.remove_from_folder) {
+          folderRemoveVideo(m.folder_id, card_data);
+          Lampa.Noty.show('Видалено з папки');
+          Lampa.Controller.toggle('content');
+          // Оновлюємо екран, якщо ми всередині папки
+          if (Lampa.Activity.active().url && Lampa.Activity.active().url.indexOf('sisi_folder:') === 0) {
+            Lampa.Activity.replace(Lampa.Activity.active());
+          }
+        } else if (m.folder_id) {
+          var added = folderAddVideo(m.folder_id, card_data);
+          Lampa.Noty.show(added ? 'Додано в папку' : 'Вже є в цій папці');
+          Lampa.Controller.toggle('content');
+        } else if (m.model) {
           Lampa.Activity.push({
             url: Defined.localhost.replace('/sisi', '') + '/' + card_data.model.uri,
             title: 'Модель - ' + card_data.model.name,
@@ -491,22 +551,24 @@ window.rch_nws[hostkey].Registry = function RchRegistry(client, startConnection)
         } else if (m.related) {
           Lampa.Activity.push({
             url: card_data.video + '&related=true',
-            title: 'Похожие - ' + card_data.title,
+            title: 'Схожі - ' + card_data.title,
             component: 'sisi_view_' + Defined.use_api,
             page: 1
           });
         } else if (m.history) {
-          Api.history(card_data, function(status) {
-            Lampa.Noty.show('Успешно');
+          Api.history(card_data, function (status) {
+            Lampa.Noty.show('Успішно');
           });
           Lampa.Controller.toggle('content');
         } else if (m.lampaplayer) {
           Lampa.Controller.toggle('content');
           play(card_data);
-        } else {
-          Api.bookmark(card_data, !card_data.bookmark.uid, function(status) {
-            Lampa.Noty.show('Успешно');
+        } else if (m.server_bookmark) {
+          Api.bookmark(card_data, !card_data.bookmark.uid, function (status) {
+            Lampa.Noty.show('Успішно');
           });
+          Lampa.Controller.toggle('content');
+        } else {
           Lampa.Controller.toggle('content');
         }
       },
@@ -526,7 +588,129 @@ window.rch_nws[hostkey].Registry = function RchRegistry(client, startConnection)
     fixList: fixList,
     menu: menu$2
   };
+// ── Кастомні папки (локальні) ──
+  var FOLDERS_KEY = 'sisi_custom_folders';
 
+  function foldersLoad() {
+    var data = Lampa.Storage.get(FOLDERS_KEY, null);
+    if (!data || !data.folders) {
+      data = { folders: [], items: {} };
+    }
+    if (!data.items) data.items = {};
+    return data;
+  }
+
+  function foldersSave(data) {
+    Lampa.Storage.set(FOLDERS_KEY, data);
+  }
+
+  function foldersList() {
+    return foldersLoad().folders;
+  }
+
+  function folderGetItems(folderId) {
+    var data = foldersLoad();
+    return data.items[folderId] || [];
+  }
+
+  function folderVideoKey(element) {
+    if (element.bookmark && element.bookmark.uid) return element.bookmark.uid;
+    if (element.video) return Lampa.Utils.hash(element.video);
+    return Lampa.Utils.hash((element.name || '') + (element.picture || ''));
+  }
+
+  function folderAddVideo(folderId, element) {
+    var data = foldersLoad();
+    if (!data.items[folderId]) data.items[folderId] = [];
+
+    var key = folderVideoKey(element);
+    var exists = data.items[folderId].some(function (v) {
+      return folderVideoKey(v) === key;
+    });
+
+    if (!exists) {
+      // зберігаємо копію без params (щоб не тягнути функції)
+      var copy = Lampa.Arrays.clone(element);
+      delete copy.params;
+      delete copy.source;
+      data.items[folderId].unshift(copy);
+      foldersSave(data);
+    }
+    return !exists;
+  }
+
+  function folderRemoveVideo(folderId, element) {
+    var data = foldersLoad();
+    if (!data.items[folderId]) return false;
+    var key = folderVideoKey(element);
+    var before = data.items[folderId].length;
+    data.items[folderId] = data.items[folderId].filter(function (v) {
+      return folderVideoKey(v) !== key;
+    });
+    foldersSave(data);
+    return data.items[folderId].length < before;
+  }
+
+  function folderCreate(title) {
+    var data = foldersLoad();
+    var id = 'f_' + Lampa.Utils.uid(8).toLowerCase();
+    data.folders.push({ id: id, title: title });
+    data.items[id] = [];
+    foldersSave(data);
+    return id;
+  }
+
+  function folderRename(folderId, newTitle) {
+    var data = foldersLoad();
+    var f = data.folders.find(function (x) { return x.id === folderId; });
+    if (f) {
+      f.title = newTitle;
+      foldersSave(data);
+      return true;
+    }
+    return false;
+  }
+
+  function folderDelete(folderId) {
+    var data = foldersLoad();
+    data.folders = data.folders.filter(function (x) { return x.id !== folderId; });
+    delete data.items[folderId];
+    foldersSave(data);
+  }
+
+  function folderBuildViewJson(folderId, title) {
+    var list = folderGetItems(folderId);
+    var json = {
+      results: Utils.fixList(list),
+      total_pages: 1,
+      menu: [],
+      url: 'sisi_folder:' + folderId
+    };
+    Utils.fixCards(json.results);
+    sisiApplyGridParams(json);
+
+    var handlers = sisiCardHandlers();
+    json.results.forEach(function (element) {
+      element.source = SISI_SOURCE;
+      element.sisi_folder_id = folderId; // щоб знати, з якої папки
+      element.params = {
+        style: { name: 'collection' },
+        emit: {
+          onFocus: function (target) {
+            handlers.onFocus(target, element);
+          },
+          onlyEnter: function (target, data) {
+            handlers.onEnter(null, data || element);
+          },
+          onLong: function (target, data) {
+            handlers.onMenu($(target), data || element);
+          }
+        }
+      };
+    });
+
+    return Lampa.Utils.addSource(json, SISI_SOURCE);
+  }
   function sisiCardHandlers() {
     return {
       onMenu: function (target, card_data) {
@@ -751,7 +935,16 @@ window.rch_nws[hostkey].Registry = function RchRegistry(client, startConnection)
       });
     };
 
-    this.view = function(params, success, error) {
+this.view = function(params, success, error, waiting_rch) {
+      // Локальна папка
+      if (params.url && params.url.indexOf('sisi_folder:') === 0) {
+        var folderId = params.url.replace('sisi_folder:', '');
+        var f = foldersList().find(function (x) { return x.id === folderId; });
+        var title = f ? f.title : 'Папка';
+        success(folderBuildViewJson(folderId, title));
+        return;
+      }
+
       var u = this.account(Lampa.Utils.addUrlComponent(params.url, 'pg=' + (params.page || 1)));
       DotNet.invokeMethodAsync("JinEnergy", u.path, u.query).then(function(json) {
         if (json.list) {
@@ -904,6 +1097,14 @@ window.rch_nws[hostkey].Registry = function RchRegistry(client, startConnection)
     };
 
     this.view = function(params, success, error, waiting_rch) {
+      // Локальна папка
+      if (params.url && params.url.indexOf('sisi_folder:') === 0) {
+        var folderId = params.url.replace('sisi_folder:', '');
+        var f = foldersList().find(function (x) { return x.id === folderId; });
+        var title = f ? f.title : 'Папка';
+        success(folderBuildViewJson(folderId, title));
+        return;
+      }
       var u = Lampa.Utils.addUrlComponent(params.url, 'pg=' + (params.page || 1));
       network.silent(this.account(u), function(json) {
         if (json.rch) {
@@ -1407,9 +1608,6 @@ window.rch_nws[hostkey].Registry = function RchRegistry(client, startConnection)
         }
         Lampa.ParentalControl.query(function() {
           Api.menu(function(data) {
-            // let items = [{
-            //     title: 'Все'
-            // }]
             var items = [];
 
             if (true && (Defined.use_api !== 'pwa' || Lampa.Platform.is('android'))) {
@@ -1422,11 +1620,30 @@ window.rch_nws[hostkey].Registry = function RchRegistry(client, startConnection)
               a.title = Utils.sourceTitle(a.title);
             });
             items = items.concat(data);
+
+            // Додаємо кастомні папки
+            var myFolders = foldersList();
+            myFolders.forEach(function (f) {
+              items.push({
+                title: '📁 ' + f.title,
+                sisi_folder: true,
+                folder_id: f.id,
+                folder_title: f.title
+              });
+            });
+
             Lampa.Select.show({
               title: 'Сайты',
               items: items,
               onSelect: function onSelect(a) {
-                if (a.playlist_url) {
+                if (a.sisi_folder) {
+                  Lampa.Activity.push({
+                    url: 'sisi_folder:' + a.folder_id,
+                    title: a.folder_title,
+                    component: 'sisi_view_' + Defined.use_api,
+                    page: 1
+                  });
+                } else if (a.playlist_url) {
                   Lampa.Activity.push({
                     url: a.playlist_url,
                     title: a.title,
@@ -1441,6 +1658,57 @@ window.rch_nws[hostkey].Registry = function RchRegistry(client, startConnection)
                     page: 1
                   });
                 }
+              },
+              onLong: function onLong(a) {
+                if (!a.sisi_folder) return;
+
+                Lampa.Select.show({
+                  title: a.folder_title,
+                  items: [
+                    { title: 'Перейменувати', action: 'rename' },
+                    { title: 'Видалити папку', action: 'delete' }
+                  ],
+                  onSelect: function (m) {
+                    if (m.action === 'rename') {
+                      Lampa.Input.edit(
+                        {
+                          title: 'Нова назва',
+                          value: a.folder_title,
+                          free: true,
+                          nosave: true
+                        },
+                        function (value) {
+                          Lampa.Controller.toggle('menu');
+                          if (value && value.trim()) {
+                            folderRename(a.folder_id, value.trim());
+                            Lampa.Noty.show('Перейменовано');
+                          }
+                        }
+                      );
+                    } else if (m.action === 'delete') {
+                      Lampa.Select.show({
+                        title: 'Видалити «' + a.folder_title + '»?',
+                        items: [
+                          { title: 'Так, видалити', confirm: true },
+                          { title: 'Скасувати' }
+                        ],
+                        onSelect: function (c) {
+                          Lampa.Controller.toggle('menu');
+                          if (c.confirm) {
+                            folderDelete(a.folder_id);
+                            Lampa.Noty.show('Папку видалено');
+                          }
+                        },
+                        onBack: function () {
+                          Lampa.Controller.toggle('menu');
+                        }
+                      });
+                    }
+                  },
+                  onBack: function () {
+                    Lampa.Controller.toggle('menu');
+                  }
+                });
               },
               onBack: function onBack() {
                 Lampa.Controller.toggle('menu');
