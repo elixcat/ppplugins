@@ -525,7 +525,7 @@ function menu$2(target, card_data) {
               if (value && value.trim()) {
                 var id = folderCreate(value.trim());
                 folderAddVideo(id, card_data);
-                Lampa.Noty.show('Створено «' + value.trim() + '» і додано відео');
+                Lampa.Noty.show('Створено папку «' + value.trim() + '» і додано відео');
               }
             }
           );
@@ -803,11 +803,11 @@ function menu$2(target, card_data) {
     menu.forEach(function (m) {
       var spl = m.title.split(':');
       m.title = spl[0].trim();
-      if (spl[1]) m.subtitle = Lampa.Utils.capitalizeFirstLetter(spl[1].trim().replace(/all/i, 'Любой'));
+      if (spl[1]) m.subtitle = Lampa.Utils.capitalizeFirstLetter(spl[1].trim().replace(/all/i, 'Будь-який'));
 
       if (m.submenu) {
         m.submenu.forEach(function (s) {
-          s.title = Lampa.Utils.capitalizeFirstLetter(s.title.trim().replace(/all/i, 'Любой'));
+          s.title = Lampa.Utils.capitalizeFirstLetter(s.title.trim().replace(/all/i, 'Будь-який'));
         });
       }
     });
@@ -844,12 +844,12 @@ function menu$2(target, card_data) {
 
     if (search) {
       Lampa.Arrays.insert(items, 0, {
-        title: 'Найти',
+        title: 'Знайти',
         onSelect: function onSelect() {
           $('body').addClass('ambience--enable');
           Lampa.Input.edit(
             {
-              title: 'Поиск',
+              title: 'Пошук',
               value: '',
               free: true,
               nosave: true
@@ -862,7 +862,7 @@ function menu$2(target, card_data) {
                 var separator = search.playlist_url.indexOf('?') !== -1 ? '&' : '?';
                 Lampa.Activity.push({
                   url: search.playlist_url + separator + 'search=' + encodeURIComponent(value),
-                  title: 'Поиск - ' + value,
+                  title: 'Пошук - ' + value,
                   component: 'sisi_view_' + Defined.use_api,
                   search_start: search,
                   page: 1
@@ -875,7 +875,7 @@ function menu$2(target, card_data) {
     }
 
     Lampa.Select.show({
-      title: 'Фильтр',
+      title: 'Фільтр',
       items: items,
       onBack: function onBack() {
         Lampa.Controller.toggle('content');
@@ -1325,7 +1325,7 @@ this.view = function(params, success, error, waiting_rch) {
             this.build(data);
 
             if (!data.results.length && object.url.indexOf('/bookmarks') !== -1) {
-              Lampa.Noty.show('Удерживайте ОК на видео для добавления в закладки.', {
+              Lampa.Noty.show('Утримуйте ОК на відео, щоб додати до закладок.', {
                 time: 10000
               });
             }
@@ -1350,7 +1350,7 @@ this.view = function(params, success, error, waiting_rch) {
   }
 
   var Search = {
-    title: 'Клубничка',
+    title: 'Троскавка',
     search: function search(params, oncomplite) {
       network.timeout(REQUEST_TIMEOUT);
       network.silent(
@@ -1385,7 +1385,7 @@ this.view = function(params, success, error, waiting_rch) {
       var url = Lampa.Utils.addUrlComponent(params.data.url, 'search=' + encodeURIComponent(params.query));
       Lampa.Activity.push({
         url: url,
-        title: 'Поиск - ' + params.query,
+        title: 'Пошук - ' + params.query,
         component: 'sisi_view_' + Defined.use_api,
         page: 2
       });
@@ -1567,8 +1567,8 @@ this.view = function(params, success, error, waiting_rch) {
           "default": true
         },
         field: {
-          name: 'Предпросмотр',
-          description: 'Показывать предпросмотр при наведение на карточку'
+          name: 'Передперегляд',
+          description: 'Показувати передпегляд при наведенні на картку'
         },
         onRender: function onRender(item) {}
       });
@@ -1581,8 +1581,8 @@ this.view = function(params, success, error, waiting_rch) {
           "default": true
         },
         field: {
-          name: 'История',
-          description: 'Сохранять историю просмотров'
+          name: 'Історія',
+          description: 'Зберігати історію переглядів'
         },
         onRender: function onRender(item) {}
       });
@@ -1597,44 +1597,45 @@ this.view = function(params, success, error, waiting_rch) {
       }
 
       button.on('hover:enter', function() {
-        // Проверка и создание Lampa.ParentalControl, если не существует
+
         if (!Lampa.ParentalControl) {
             Lampa.ParentalControl = {
             query: function(success, error) {
-                // По умолчанию всегда разрешает доступ
+
                 if (typeof success === 'function') success();
             }
             };
         }
         Lampa.ParentalControl.query(function() {
-          Api.menu(function(data) {
-            var items = [];
+  Api.menu(function(data) {
+    var items = [];
 
-            if (true && (Defined.use_api !== 'pwa' || Lampa.Platform.is('android'))) {
-              items.push({
-                title: 'Все'
-              });
-            }
+    if (true && (Defined.use_api !== 'pwa' || Lampa.Platform.is('android'))) {
+      items.push({
+        title: 'Все'
+      });
+    }
 
-            data.forEach(function(a) {
-              a.title = Utils.sourceTitle(a.title);
-            });
-            items = items.concat(data);
+    // Папки зверху (після «Все»)
+    var myFolders = foldersList();
+    myFolders.forEach(function (f) {
+      items.push({
+        title: '📁 ' + f.title,
+        sisi_folder: true,
+        folder_id: f.id,
+        folder_title: f.title
+      });
+    });
 
-            // Додаємо кастомні папки
-            var myFolders = foldersList();
-            myFolders.forEach(function (f) {
-              items.push({
-                title: '📁 ' + f.title,
-                sisi_folder: true,
-                folder_id: f.id,
-                folder_title: f.title
-              });
-            });
+    data.forEach(function(a) {
+      a.title = Utils.sourceTitle(a.title);
+    });
+    items = items.concat(data);
 
-            Lampa.Select.show({
-              title: 'Сайты',
-              items: items,
+    Lampa.Select.show({
+      title: 'Сайти',
+      items: items,
+
               onSelect: function onSelect(a) {
                 if (a.sisi_folder) {
                   Lampa.Activity.push({
