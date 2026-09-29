@@ -891,8 +891,10 @@ window.rch_nws[hostkey].Registry = function RchRegistry(client, startConnection)
         menu = data.channels.filter(function(m) {
       var title = (m.title || '').toLowerCase();
       var url   = (m.playlist_url || '').toLowerCase();
-      return title.indexOf('youjizz') === -1 && url.indexOf('youjizz') === -1;
-      return title.indexOf('CrocoTube') === -1 && url.indexOf('CrocoTube') === -1;
+      return title.indexOf('youjizz') === -1 &&
+             title.indexOf('crocotube') === -1 &&
+             url.indexOf('youjizz') === -1 &&
+             url.indexOf('crocotube') === -1;
     });
     success(menu);
   } else {
