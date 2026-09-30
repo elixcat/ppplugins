@@ -874,12 +874,8 @@ function folderRemoveVideo(folderId, element, done) {
   }
 
   function sisiApplyGridParams(target) {
-    var isLandscape = (window.innerWidth || 0) >= (window.innerHeight || 0);
-    var key = isLandscape ? 'sisi_grid_landscape' : 'sisi_grid_portrait';
-    var def = isLandscape ? '3' : '2';
-    var cols = parseInt(Lampa.Storage.get(key, def), 10) || parseInt(def, 10);
-
-    if (cols < 2) cols = 2;
+    var cols = parseInt(Lampa.Storage.get('sisi_grid', '3'), 10) || 3;
+    if (cols < 1) cols = 1;
     if (cols > 6) cols = 6;
 
     target.params = target.params || {};
@@ -1750,37 +1746,21 @@ this.view = function(params, success, error, waiting_rch) {
       Lampa.SettingsApi.addParam({
         component: 'sisi',
         param: {
-          name: 'sisi_grid_landscape',
+          name: 'sisi_grid',
           type: 'select',
           values: {
-            '3': '3×2 (стандарт)',
-            '4': '4×3',
-            '5': '5×4'
+            '1': '1',
+            '2': '2',
+            '3': '3',
+            '4': '4',
+            '5': '5',
+            '6': '6'
           },
           "default": '3'
         },
         field: {
-          name: 'Сітка відео (ландшафт)',
-          description: 'Карток у рядку в горизонтальній орієнтації'
-        },
-        onRender: function onRender(item) {}
-      });
-
-      Lampa.SettingsApi.addParam({
-        component: 'sisi',
-        param: {
-          name: 'sisi_grid_portrait',
-          type: 'select',
-          values: {
-            '2': '2×3 (стандарт)',
-            '3': '3×4',
-            '4': '4×5'
-          },
-          "default": '2'
-        },
-        field: {
-          name: 'Сітка відео (портрет)',
-          description: 'Карток у рядку у вертикальній орієнтації'
+          name: 'Сітка відео',
+          description: 'Значення cols (після тесту підпишемо нормальні назви). Зміна після перезаходу на сторінку'
         },
         onRender: function onRender(item) {}
       });
