@@ -523,26 +523,43 @@ function menu$2(target, card_data) {
                 Lampa.Noty.show('Створення...');
                 folderAddVideo(id, card_data, function (added) {
                   Lampa.Noty.show(added
-                    ? 'Створено «' + value.trim() + '» і додано відео'
+                    ? 'Створено папку «' + value.trim() + '» і додано відео'
                     : 'Створено, але відео вже було в папці');
                 });
               }
             }
           );
         } else if (m.folder_id && m.remove_from_folder) {
-          folderRemoveVideo(m.folder_id, card_data, function () {
-            Lampa.Noty.show('Видалено з папки');
+          var videoName = card_data.name || card_data.title || 'відео';
+          Lampa.Select.show({
+            title: 'Видалити з папки?',
+            items: [
+              { title: 'Так, видалити', confirm: true },
+              { title: 'Скасувати' }
+            ],
+            onSelect: function (c) {
+              if (c.confirm) {
+                folderRemoveVideo(m.folder_id, card_data, function () {
+                  Lampa.Noty.show('Видалено з папки');
+                });
+                Lampa.Controller.toggle('content');
+                var act = Lampa.Activity.active();
+                if (act && act.url && String(act.url).indexOf('sisi_folder:') === 0) {
+                  Lampa.Activity.replace({
+                    url: act.url,
+                    title: act.title,
+                    component: act.component || ('sisi_view_' + Defined.use_api),
+                    page: 1
+                  });
+                }
+              } else {
+                Lampa.Controller.toggle('content');
+              }
+            },
+            onBack: function () {
+              Lampa.Controller.toggle('content');
+            }
           });
-          Lampa.Controller.toggle('content');
-          var act = Lampa.Activity.active();
-          if (act && act.url && String(act.url).indexOf('sisi_folder:') === 0) {
-            Lampa.Activity.replace({
-              url: act.url,
-              title: act.title,
-              component: act.component || ('sisi_view_' + Defined.use_api),
-              page: 1
-            });
-          }
         } else if (m.folder_id) {
           Lampa.Noty.show('Додавання...');
           folderAddVideo(m.folder_id, card_data, function (added) {
@@ -1465,9 +1482,54 @@ this.view = function(params, success, error, waiting_rch) {
       module.toggle(Lampa.Maker.module('Category').MASK.base, 'Pagination');
     });
 
+    function openSearch() {
+      var search = null;
+      if (menu && menu.length) {
+        for (var i = 0; i < menu.length; i++) {
+          if (menu[i].search_on) {
+            search = menu[i];
+            break;
+          }
+        }
+      }
+      if (!search) search = object.search_start;
+
+      if (!search || !search.playlist_url) {
+        Lampa.Noty.show('Пошук на цій сторінці недоступний');
+        return;
+      }
+
+      $('body').addClass('ambience--enable');
+      Lampa.Input.edit(
+        {
+          title: 'Пошук',
+          value: '',
+          free: true,
+          nosave: true
+        },
+        function (value) {
+          $('body').removeClass('ambience--enable');
+          Lampa.Controller.toggle('content');
+
+          if (value) {
+            var separator = search.playlist_url.indexOf('?') !== -1 ? '&' : '?';
+            Lampa.Activity.push({
+              url: search.playlist_url + separator + 'search=' + encodeURIComponent(value),
+              title: 'Пошук - ' + value,
+              component: 'sisi_view_' + Defined.use_api,
+              search_start: search,
+              page: 1
+            });
+          }
+        }
+      );
+    }
+
     comp.filter = function () {
       sisiViewFilter(menu, object);
     };
+
+    comp.openSearch = openSearch;
 
     comp.use({
       onCreate: function () {
@@ -1672,7 +1734,8 @@ this.view = function(params, success, error, waiting_rch) {
     function addFilter() {
       var activi;
       var timer;
-      var button;
+      var filterButton;
+      var searchButton;
 
       function openFilter() {
         if (!activi) return;
@@ -1680,25 +1743,55 @@ this.view = function(params, success, error, waiting_rch) {
         if (comp && typeof comp.filter === 'function') comp.filter();
       }
 
-      var filterSvg = SISI_FILTER_BUTTON.match(/<svg[\s\S]*<\/svg>/);
-      button = Lampa.Head.addIcon(filterSvg ? filterSvg[0] : '', openFilter);
-      button.addClass('head__settings');
-      button.hide();
+      function openSearch() {
+        if (!activi) return;
+        var comp = activi.activity.component;
+        if (comp && typeof comp.openSearch === 'function') comp.openSearch();
+      }
 
-      Lampa.Listener.follow('activity', function(e) {
+      var filterSvg = SISI_FILTER_BUTTON.match(/<svg[\s\S]*<\/svg>/);
+      filterButton = Lampa.Head.addIcon(filterSvg ? filterSvg[0] : '', openFilter);
+      filterButton.addClass('head__settings');
+      filterButton.hide();
+
+      var searchSvg = [
+        '<svg height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">',
+        '  <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/>',
+        '  <path d="M20 20L16.5 16.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+        '</svg>'
+      ].join('');
+
+      searchButton = Lampa.Head.addIcon(searchSvg, openSearch);
+      searchButton.addClass('head__search');
+      searchButton.hide();
+
+      function setVisible(show) {
+        if (show) {
+          filterButton.show();
+          searchButton.show();
+        } else {
+          filterButton.hide();
+          searchButton.hide();
+          activi = false;
+        }
+      }
+
+      Lampa.Listener.follow('activity', function (e) {
         if (e.type == 'start') activi = e.object;
+
         clearTimeout(timer);
-        timer = setTimeout(function() {
-          if (activi) {
-            if (activi.component !== 'sisi_view_' + Defined.use_api) {
-              button.hide();
-              activi = false;
-            }
+        timer = setTimeout(function () {
+          if (activi && activi.component !== 'sisi_view_' + Defined.use_api) {
+            setVisible(false);
           }
         }, 1000);
 
         if (e.type == 'start' && e.component == 'sisi_view_' + Defined.use_api) {
-          button.show();
+          // у локальних папках пошуку немає — лупу можна ховати
+          var isFolder = activi.url && String(activi.url).indexOf('sisi_folder:') === 0;
+          filterButton.show();
+          if (isFolder) searchButton.hide();
+          else searchButton.show();
           activi = e.object;
         }
       });
