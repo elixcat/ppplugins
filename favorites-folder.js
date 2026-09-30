@@ -783,7 +783,7 @@
                             type: typeUid,
                             total_pages: typeCards.length > 20 ? Math.ceil(typeCards.length / 20) : 1,
                             icon_svg: Lampa.Template.string('custom-fav-icon-svg'),  
-                            icon_bgcolor: '#fff',
+                            icon_bgcolor: '#000',
                             icon_color: '#fd4518',
                             params: {
                                 module: Lampa.Maker.module('Line').toggle(Lampa.Maker.module('Line').MASK.base, 'Icon', 'Event'),  
