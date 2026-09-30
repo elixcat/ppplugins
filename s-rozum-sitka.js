@@ -1285,19 +1285,32 @@ this.view = function(params, success, error, waiting_rch) {
         url += (url.indexOf('?') === -1 ? '?' : '&') + 'rchtype=' + ((window.rch_nws && window.rch_nws[hostkey] ? window.rch_nws[hostkey].type : window.rch && window.rch[hostkey] ? window.rch[hostkey].type : '') || '');
       network.silent(url, function(data) {
         if (data.channels) {
-         // Ховаємо сайти з меню і з «Все»
-        menu = data.channels.filter(function(m) {
-      var title = (m.title || '').toLowerCase();
-      var url   = (m.playlist_url || '').toLowerCase();
-      return title.indexOf('youjizz') === -1 &&
-             title.indexOf('crocotube') === -1 &&
-             url.indexOf('youjizz') === -1 &&
-             url.indexOf('crocotube') === -1;
-    });
-    success(menu);
-  } else {
-    error(data.msg);
-  }
+          var blacklist = [
+            'youjizz', 'crocotube',
+            'xdsgay', 'xmrgay', 'phubgay', 'gayporntube', 'phubtrans',
+            'sexporno', 'fpo', 'familyporn', 'uporno', 'xasiat', 'sexxxxhub',
+            'pornve', 'perfectdamen', '3movs', 'vporno', 'ebasos', 'lenkino',
+            'ebun', 'jopa', 'porno666', 'trahkino', 'beeg', 'porn4days',
+            'pornk', 'huyamba', 'yaeby', '24rolika', 'xxxperevod', 'pornone',
+            'porndig', 'oxax', 'chaturbate', 'tizam', 'xnxx', 'spankbang', 'ebalovo'
+          ];
+
+          menu = data.channels.filter(function (m) {
+            var title = (m.title || '').toLowerCase();
+            var url = (m.playlist_url || '').toLowerCase();
+
+            for (var i = 0; i < blacklist.length; i++) {
+              if (title.indexOf(blacklist[i]) !== -1 || url.indexOf(blacklist[i]) !== -1) {
+                return false;
+              }
+            }
+            return true;
+          });
+
+          success(menu);
+        } else {
+          error(data.msg);
+        }
 }, error);
     };
 
