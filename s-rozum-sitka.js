@@ -456,13 +456,6 @@ function menu$2(target, card_data) {
       });
     }
 
-    // 2. Плеєр Lampa
-    if (Lampa.Platform.is('android') && Lampa.Storage.field('player') !== 'inner') {
-      cm.push({
-        title: 'Плеєр Lampa',
-        lampaplayer: true
-      });
-    }
 
     // 3. Модель (якщо є)
     if (card_data.model) {
@@ -523,7 +516,7 @@ function menu$2(target, card_data) {
                 Lampa.Noty.show('Створення...');
                 folderAddVideo(id, card_data, function (added) {
                   Lampa.Noty.show(added
-                    ? 'Створено папку «' + value.trim() + '» і додано відео'
+                    ? 'Створено «' + value.trim() + '» і додано відео'
                     : 'Створено, але відео вже було в папці');
                 });
               }
@@ -965,14 +958,58 @@ function folderRemoveVideo(folderId, element, done) {
   function processViewMenu(menu) {
     if (!menu) return;
 
+    var titleMap = {
+      'сортировка': 'Сортування',
+      'сортировка видео': 'Сортування відео',
+      'категория': 'Категорія',
+      'категории': 'Категорії',
+      'категории видео': 'Категорії відео',
+      'ориентация': 'Орієнтація',
+      'качество': 'Якість',
+      'продолжительность': 'Тривалість',
+      'длительность': 'Тривалість',
+      'производитель': 'Виробник',
+      'канал': 'Канал',
+      'теги': 'Теги',
+      'год': 'Рік',
+      'страна': 'Країна',
+      'поиск': 'Пошук',
+      'найти': 'Знайти'
+    };
+
+    var subtitleMap = {
+      'newest': 'Нові',
+      'oldest': 'Старі',
+      'most viewed': 'Популярні',
+      'mostviewed': 'Популярні',
+      'top rated': 'Топ',
+      'toprated': 'Топ',
+      'longest': 'Найдовші',
+      'shortest': 'Найкоротші',
+      'all': 'Будь-який',
+      'любой': 'Будь-який'
+    };
+
     menu.forEach(function (m) {
       var spl = m.title.split(':');
-      m.title = spl[0].trim();
-      if (spl[1]) m.subtitle = Lampa.Utils.capitalizeFirstLetter(spl[1].trim().replace(/all/i, 'Будь-який'));
+      var main = spl[0].trim();
+      var key = main.toLowerCase();
+
+      m.title = titleMap[key] || Lampa.Utils.capitalizeFirstLetter(main);
+
+      if (spl[1]) {
+        var sub = spl[1].trim();
+        var subKey = sub.toLowerCase();
+        sub = subtitleMap[subKey] || sub.replace(/all/i, 'Будь-який');
+        m.subtitle = Lampa.Utils.capitalizeFirstLetter(sub);
+      }
 
       if (m.submenu) {
         m.submenu.forEach(function (s) {
-          s.title = Lampa.Utils.capitalizeFirstLetter(s.title.trim().replace(/all/i, 'Будь-який'));
+          var st = (s.title || '').trim();
+          var sk = st.toLowerCase();
+          st = subtitleMap[sk] || titleMap[sk] || st.replace(/all/i, 'Будь-який');
+          s.title = Lampa.Utils.capitalizeFirstLetter(st);
         });
       }
     });
