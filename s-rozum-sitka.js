@@ -876,7 +876,7 @@ function folderRemoveVideo(folderId, element, done) {
   function sisiApplyGridParams(target) {
     var cols = parseInt(Lampa.Storage.get('sisi_grid', '3'), 10) || 3;
     if (cols < 2) cols = 2;
-    if (cols > 5) cols = 5;
+    if (cols > 6) cols = 6;
 
     target.params = target.params || {};
     Lampa.Arrays.extend(target.params, {
