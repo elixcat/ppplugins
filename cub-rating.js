@@ -93,7 +93,7 @@
 					if (!$kp.length) return;
 					// Переконуємось, що .rate--kp саме з детальної сторінки
 					if ($kp.closest('.card__view').length) return;
-					$kp.after('<div class="full-start__rate rate--cub hide"><div></div><div></div><div style="padding-left: 0;"><img src="https://elixcat.github.io/ppplugins/cub.png" style="height:1em;width:auto;vertical-align:middle;" alt="CUB"></div></div>');
+					$kp.after('<div class="full-start__rate rate--cub hide"><div></div><div></div><div style="padding-left: 0;"><img src="https://elixcat.github.io/ppplugins/cub.png" style="height:2em;width:auto;vertical-align:middle;" alt="CUB"></div></div>');
 					rateCub = $('.rate--cub', render);
 				}
 				if (rateCub.hasClass('hide')) {
