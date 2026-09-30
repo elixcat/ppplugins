@@ -448,15 +448,49 @@ function menu$2(target, card_data) {
 
     var cm = [];
 
-    // Звичайні закладки сервера (якщо є bookmark)
-    if (card_data.bookmark) {
+    // 1. Схожі
+    if (card_data.related) {
       cm.push({
-        title: !card_data.bookmark.uid ? 'В закладки' : 'Видалити з закладок',
-        server_bookmark: true
+        title: 'Схожі',
+        related: true
       });
     }
 
-    // ── Папки ──
+    // 2. Плеєр Lampa
+    if (Lampa.Platform.is('android') && Lampa.Storage.field('player') !== 'inner') {
+      cm.push({
+        title: 'Плеєр Lampa',
+        lampaplayer: true
+      });
+    }
+
+    // 3. Модель (якщо є)
+    if (card_data.model) {
+      cm.push({
+        title: card_data.model.name,
+        model: true
+      });
+    }
+
+    // 4. Видалити з цієї папки (лише всередині папки)
+    if (card_data.sisi_folder_id) {
+      cm.push({
+        title: 'Видалити з цієї папки',
+        remove_from_folder: true,
+        folder_id: card_data.sisi_folder_id
+      });
+    }
+
+
+    // 6. Історія
+    if (card_data.history_uid) {
+      cm.push({
+        title: 'Видалити з історії',
+        history: true
+      });
+    }
+
+    // 7. Нова папка + список папок
     cm.push({
       title: 'В нову папку',
       new_folder: true
@@ -469,43 +503,6 @@ function menu$2(target, card_data) {
         folder_id: f.id
       });
     });
-
-    // Якщо відео відкрите з папки — можна прибрати з неї
-    if (card_data.sisi_folder_id) {
-      cm.push({
-        title: 'Видалити з цієї папки',
-        remove_from_folder: true,
-        folder_id: card_data.sisi_folder_id
-      });
-    }
-
-    if (card_data.history_uid) {
-      cm.push({
-        title: 'Видалити з історії',
-        history: true
-      });
-    }
-
-    if (card_data.related) {
-      cm.push({
-        title: 'Схожі',
-        related: true
-      });
-    }
-
-    if (card_data.model) {
-      cm.push({
-        title: card_data.model.name,
-        model: true
-      });
-    }
-
-    if (Lampa.Platform.is('android') && Lampa.Storage.field('player') !== 'inner') {
-      cm.push({
-        title: 'Плеєр Lampa',
-        lampaplayer: true
-      });
-    }
 
     Lampa.Select.show({
       title: 'Меню',
@@ -1787,27 +1784,38 @@ this.view = function(params, success, error, waiting_rch) {
   Api.menu(function(data) {
     var items = [];
 
-    if (true && (Defined.use_api !== 'pwa' || Lampa.Platform.is('android'))) {
-      items.push({
-        title: 'Все'
-      });
-    }
 
-    // Папки зверху (після «Все»)
-    var myFolders = foldersList();
-    myFolders.forEach(function (f) {
-      items.push({
-        title: '📁 ' + f.title,
-        sisi_folder: true,
-        folder_id: f.id,
-        folder_title: f.title
-      });
-    });
+    // Папки зверху (якщо вже є — лиши як є)
+            var myFolders = foldersList();
+            myFolders.forEach(function (f) {
+              items.push({
+                title: '📁 ' + f.title,
+                sisi_folder: true,
+                folder_id: f.id,
+                folder_title: f.title
+              });
+            });
 
-    data.forEach(function(a) {
-      a.title = Utils.sourceTitle(a.title);
-    });
-    items = items.concat(data);
+            // Сайти з сервера: ховаємо «Закладки», правимо «История»
+            data.forEach(function (a) {
+              a.title = Utils.sourceTitle(a.title);
+
+              // История → Історія
+              if (/истори/i.test(a.title || '')) {
+                a.title = 'Історія';
+              }
+            });
+
+            var channels = data.filter(function (m) {
+              var title = (m.title || '').toLowerCase();
+              var url = (m.playlist_url || '').toLowerCase();
+              // ховаємо серверні закладки
+              return title.indexOf('заклад') === -1 &&
+                     title.indexOf('bookmark') === -1 &&
+                     url.indexOf('bookmark') === -1;
+            });
+
+            items = items.concat(channels);
 
     Lampa.Select.show({
       title: 'Сайти',
