@@ -875,8 +875,8 @@ function folderRemoveVideo(folderId, element, done) {
 
   function sisiApplyGridParams(target) {
     var cols = parseInt(Lampa.Storage.get('sisi_grid', '3'), 10) || 3;
-    if (cols < 1) cols = 1;
-    if (cols > 6) cols = 6;
+    if (cols < 2) cols = 2;
+    if (cols > 5) cols = 5;
 
     target.params = target.params || {};
     Lampa.Arrays.extend(target.params, {
@@ -1749,18 +1749,17 @@ this.view = function(params, success, error, waiting_rch) {
           name: 'sisi_grid',
           type: 'select',
           values: {
-            '1': '1',
-            '2': '2',
-            '3': '3',
-            '4': '4',
-            '5': '5',
-            '6': '6'
+            '2': '4×6 / 4×3',
+            '3': '2×4 / 3×2 (великі)',
+            '4': '3×5 / 4×3 (середні)',
+            '5': '4×6 / 5×3 (дрібні)'
+            '6': '5×7 / 6×3 (дуже дрібні)'
           },
           "default": '3'
         },
         field: {
           name: 'Сітка відео',
-          description: 'Значення cols (після тесту підпишемо нормальні назви). Зміна після перезаходу на сторінку'
+          description: 'Портрет / ландшафт. Зміна після перезаходу на сторінку'
         },
         onRender: function onRender(item) {}
       });
