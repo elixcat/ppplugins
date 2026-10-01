@@ -1786,6 +1786,7 @@ this.view = function(params, success, error, waiting_rch) {
       var timer;
       var filterButton;
       var searchButton;
+      var sitesButton;
 
       function openFilter() {
         if (!activi) return;
@@ -1793,35 +1794,49 @@ this.view = function(params, success, error, waiting_rch) {
         if (comp && typeof comp.filter === 'function') comp.filter();
       }
 
-      function openSearch() {
+      function openSearchBtn() {
         if (!activi) return;
         var comp = activi.activity.component;
         if (comp && typeof comp.openSearch === 'function') comp.openSearch();
       }
 
-      var filterSvg = SISI_FILTER_BUTTON.match(/<svg[\s\S]*<\/svg>/);
-      filterButton = Lampa.Head.addIcon(filterSvg ? filterSvg[0] : '', openFilter);
-      filterButton.addClass('head__settings');
-      filterButton.hide();
-
+      // 1. Пошук
       var searchSvg = [
         '<svg height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">',
         '  <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/>',
         '  <path d="M20 20L16.5 16.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
         '</svg>'
       ].join('');
-
-      searchButton = Lampa.Head.addIcon(searchSvg, openSearch);
+      searchButton = Lampa.Head.addIcon(searchSvg, openSearchBtn);
       searchButton.addClass('head__search');
       searchButton.hide();
+
+      // 2. Фільтр
+      var filterSvg = SISI_FILTER_BUTTON.match(/<svg[\s\S]*<\/svg>/);
+      filterButton = Lampa.Head.addIcon(filterSvg ? filterSvg[0] : '', openFilter);
+      filterButton.addClass('head__settings');
+      filterButton.hide();
+
+      // 3. Список сайтів (полуничка)
+      var sitesSvg = [
+        '<svg height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">',
+        '  <text x="12" y="18" text-anchor="middle" font-size="18">🍓</text>',
+        '</svg>'
+      ].join('');
+      sitesButton = Lampa.Head.addIcon(sitesSvg, function () {
+        openSitesList();
+      });
+      sitesButton.addClass('head__sisi-sites');
+      sitesButton.hide();
 
       function setVisible(show) {
         if (show) {
           filterButton.show();
-          searchButton.show();
+          sitesButton.show();
         } else {
           filterButton.hide();
           searchButton.hide();
+          sitesButton.hide();
           activi = false;
         }
       }
@@ -1837,9 +1852,9 @@ this.view = function(params, success, error, waiting_rch) {
         }, 1000);
 
         if (e.type == 'start' && e.component == 'sisi_view_' + Defined.use_api) {
-          // у локальних папках пошуку немає — лупу можна ховати
           var isFolder = activi.url && String(activi.url).indexOf('sisi_folder:') === 0;
           filterButton.show();
+          sitesButton.show();
           if (isFolder) searchButton.hide();
           else searchButton.show();
           activi = e.object;
@@ -1904,6 +1919,131 @@ this.view = function(params, success, error, waiting_rch) {
         onRender: function onRender(item) {}
       });
     }
+    function openSitesList() {
+      if (!Lampa.ParentalControl) {
+        Lampa.ParentalControl = {
+          query: function (success) {
+            if (typeof success === 'function') success();
+          }
+        };
+      }
+
+      Lampa.ParentalControl.query(function () {
+        Api.menu(function (data) {
+          var items = [];
+
+          var myFolders = foldersList();
+          myFolders.forEach(function (f) {
+            items.push({
+              title: '📁 ' + f.title,
+              sisi_folder: true,
+              folder_id: f.id,
+              folder_title: f.title
+            });
+          });
+
+          data.forEach(function (a) {
+            a.title = Utils.sourceTitle(a.title);
+            if (/истори/i.test(a.title || '')) a.title = 'Історія';
+          });
+
+          var channels = data.filter(function (m) {
+            var title = (m.title || '').toLowerCase();
+            var url = (m.playlist_url || '').toLowerCase();
+            return title.indexOf('заклад') === -1 &&
+                   title.indexOf('bookmark') === -1 &&
+                   url.indexOf('bookmark') === -1;
+          });
+
+          items = items.concat(channels);
+
+          Lampa.Select.show({
+            title: 'Сайти',
+            items: items,
+            onSelect: function (a) {
+              if (a.sisi_folder) {
+                Lampa.Activity.push({
+                  url: 'sisi_folder:' + a.folder_id,
+                  title: a.folder_title,
+                  component: 'sisi_view_' + Defined.use_api,
+                  page: 1
+                });
+              } else if (a.playlist_url) {
+                Lampa.Activity.push({
+                  url: a.playlist_url,
+                  title: a.title,
+                  component: 'sisi_view_' + Defined.use_api,
+                  page: 1
+                });
+              } else {
+                Lampa.Activity.push({
+                  url: '',
+                  title: Lampa.Lang.translate('lampac_sisiname'),
+                  component: 'sisi_' + Defined.use_api,
+                  page: 1
+                });
+              }
+            },
+            onLong: function (a) {
+              if (!a.sisi_folder) return;
+
+              Lampa.Select.show({
+                title: a.folder_title,
+                items: [
+                  { title: 'Перейменувати', action: 'rename' },
+                  { title: 'Видалити папку', action: 'delete' }
+                ],
+                onSelect: function (m) {
+                  if (m.action === 'rename') {
+                    Lampa.Input.edit(
+                      {
+                        title: 'Нова назва',
+                        value: a.folder_title,
+                        free: true,
+                        nosave: true
+                      },
+                      function (value) {
+                        Lampa.Controller.toggle('menu');
+                        if (value && value.trim()) {
+                          folderRename(a.folder_id, value.trim());
+                          Lampa.Noty.show('Перейменовано');
+                        }
+                      }
+                    );
+                  } else if (m.action === 'delete') {
+                    Lampa.Select.show({
+                      title: 'Видалити «' + a.folder_title + '»?',
+                      items: [
+                        { title: 'Так, видалити', confirm: true },
+                        { title: 'Скасувати' }
+                      ],
+                      onSelect: function (c) {
+                        Lampa.Controller.toggle('menu');
+                        if (c.confirm) {
+                          folderDelete(a.folder_id);
+                          Lampa.Noty.show('Папку видалено');
+                        }
+                      },
+                      onBack: function () {
+                        Lampa.Controller.toggle('menu');
+                      }
+                    });
+                  }
+                },
+                onBack: function () {
+                  Lampa.Controller.toggle('menu');
+                }
+              });
+            },
+            onBack: function () {
+              Lampa.Controller.toggle('content');
+            }
+          });
+        }, function (e) {
+          if (typeof e == 'string') modal(e);
+        });
+      }, function () {});
+    }
 
     function add() {
       var button = $(sisiMenuItemHtml(Lampa.Lang.translate('lampac_sisiname')));
@@ -1913,140 +2053,8 @@ this.view = function(params, success, error, waiting_rch) {
         button.find('.menu__ico').css('position', 'relative').append(pw);
       }
 
-      button.on('hover:enter', function() {
-
-        if (!Lampa.ParentalControl) {
-            Lampa.ParentalControl = {
-            query: function(success, error) {
-
-                if (typeof success === 'function') success();
-            }
-            };
-        }
-        Lampa.ParentalControl.query(function() {
-  Api.menu(function(data) {
-    var items = [];
-
-
-    // Папки зверху (якщо вже є — лиши як є)
-            var myFolders = foldersList();
-            myFolders.forEach(function (f) {
-              items.push({
-                title: '📁 ' + f.title,
-                sisi_folder: true,
-                folder_id: f.id,
-                folder_title: f.title
-              });
-            });
-
-            // Сайти з сервера: ховаємо «Закладки», правимо «История»
-            data.forEach(function (a) {
-              a.title = Utils.sourceTitle(a.title);
-
-              // История → Історія
-              if (/истори/i.test(a.title || '')) {
-                a.title = 'Історія';
-              }
-            });
-
-            var channels = data.filter(function (m) {
-              var title = (m.title || '').toLowerCase();
-              var url = (m.playlist_url || '').toLowerCase();
-              // ховаємо серверні закладки
-              return title.indexOf('заклад') === -1 &&
-                     title.indexOf('bookmark') === -1 &&
-                     url.indexOf('bookmark') === -1;
-            });
-
-            items = items.concat(channels);
-
-    Lampa.Select.show({
-      title: 'Сайти',
-      items: items,
-
-              onSelect: function onSelect(a) {
-                if (a.sisi_folder) {
-                  Lampa.Activity.push({
-                    url: 'sisi_folder:' + a.folder_id,
-                    title: a.folder_title,
-                    component: 'sisi_view_' + Defined.use_api,
-                    page: 1
-                  });
-                } else if (a.playlist_url) {
-                  Lampa.Activity.push({
-                    url: a.playlist_url,
-                    title: a.title,
-                    component: 'sisi_view_' + Defined.use_api,
-                    page: 1
-                  });
-                } else {
-                  Lampa.Activity.push({
-                    url: '',
-                    title: Lampa.Lang.translate('lampac_sisiname'),
-                    component: 'sisi_' + Defined.use_api,
-                    page: 1
-                  });
-                }
-              },
-              onLong: function onLong(a) {
-                if (!a.sisi_folder) return;
-
-                Lampa.Select.show({
-                  title: a.folder_title,
-                  items: [
-                    { title: 'Перейменувати', action: 'rename' },
-                    { title: 'Видалити папку', action: 'delete' }
-                  ],
-                  onSelect: function (m) {
-                    if (m.action === 'rename') {
-                      Lampa.Input.edit(
-                        {
-                          title: 'Нова назва',
-                          value: a.folder_title,
-                          free: true,
-                          nosave: true
-                        },
-                        function (value) {
-                          Lampa.Controller.toggle('menu');
-                          if (value && value.trim()) {
-                            folderRename(a.folder_id, value.trim());
-                            Lampa.Noty.show('Перейменовано');
-                          }
-                        }
-                      );
-                    } else if (m.action === 'delete') {
-                      Lampa.Select.show({
-                        title: 'Видалити «' + a.folder_title + '»?',
-                        items: [
-                          { title: 'Так, видалити', confirm: true },
-                          { title: 'Скасувати' }
-                        ],
-                        onSelect: function (c) {
-                          Lampa.Controller.toggle('menu');
-                          if (c.confirm) {
-                            folderDelete(a.folder_id);
-                            Lampa.Noty.show('Папку видалено');
-                          }
-                        },
-                        onBack: function () {
-                          Lampa.Controller.toggle('menu');
-                        }
-                      });
-                    }
-                  },
-                  onBack: function () {
-                    Lampa.Controller.toggle('menu');
-                  }
-                });
-              },
-              onBack: function onBack() {
-                Lampa.Controller.toggle('menu');
-              }
-            });
-          }, function (e) {
-            if (typeof e == 'string') modal(e);
-          });
-        }, function () {});
+      button.on('hover:enter', function () {
+        openSitesList();
       });
       $('.menu .menu__list').eq(0).append(button);
     }
