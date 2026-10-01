@@ -1802,18 +1802,12 @@ this.view = function(params, success, error, waiting_rch) {
 
       // Порядок addIcon зворотний → на екрані: пошук · фільтр · полуничка
 
-      // 3. Список сайтів
-      var sitesSvg = [
-        '<svg height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">',
-        '  <path d="M12 3C10.5 3 9.2 4.2 9 5.5C7.5 5.2 6 6.2 6 8C6 8.5 6.2 9 6.5 9.3C5.2 10.2 4 12.2 4 15C4 19 7.5 22 12 22C16.5 22 20 19 20 15C20 12.2 18.8 10.2 17.5 9.3C17.8 9 18 8.5 18 8C18 6.2 16.5 5.2 15 5.5C14.8 4.2 13.5 3 12 3Z" fill="currentColor"/>',
-        '  <path d="M9 5.5C9.5 6.5 10.5 7 12 7C13.5 7 14.5 6.5 15 5.5" stroke="currentColor" stroke-width="1.2" fill="none"/>',
-        '  <circle cx="9.5" cy="13" r="0.9" fill="#000" opacity="0.35"/>',
-        '  <circle cx="14.5" cy="13" r="0.9" fill="#000" opacity="0.35"/>',
-        '  <circle cx="12" cy="16" r="0.9" fill="#000" opacity="0.35"/>',
-        '  <circle cx="10" cy="17.5" r="0.7" fill="#000" opacity="0.35"/>',
-        '  <circle cx="14" cy="17.5" r="0.7" fill="#000" opacity="0.35"/>',
-        '</svg>'
-      ].join('');
+      // 3. Список сайтів — іконка як у меню плагіна
+      var sitesSvg = SISI_ICON_SVG
+        .replace('width="200"', 'width="36"')
+        .replace('height="243"', 'height="36"');
+      // на випадок, якщо replace не зловить — запасний viewBox лишається, height у addIcon піджене
+
       sitesButton = Lampa.Head.addIcon(sitesSvg, function () {
         openSitesList();
       });
