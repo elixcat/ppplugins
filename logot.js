@@ -92,7 +92,7 @@
                     title.html(img);
                 }
 
-                // Аналіз яскравості логотипу через Canvas
+                // Аналіз яскравості та насиченості логотипу через Canvas
                 var testImg = new Image();
                 testImg.crossOrigin = "anonymous";
 
@@ -106,6 +106,7 @@
 
                         var data = ctx.getImageData(0, 0, w, h).data;
                         var totalBrightness = 0;
+                        var totalSaturation = 0;
                         var visiblePixels = 0;
 
                         for (var i = 0; i < data.length; i += 4) {
@@ -113,21 +114,33 @@
                             if (alpha < 50) continue; // ігноруємо прозорі пікселі
 
                             var r = data[i], g = data[i + 1], b = data[i + 2];
-                            // Формула сприйняття яскравості людським оком
+
+                            // Яскравість (luma)
                             var brightness = 0.299 * r + 0.587 * g + 0.114 * b;
+
+                            // Насиченість (HSV-style): (max - min) / max
+                            var max = Math.max(r, g, b);
+                            var min = Math.min(r, g, b);
+                            var saturation = max === 0 ? 0 : (max - min) / max;
+
                             totalBrightness += brightness;
+                            totalSaturation += saturation;
                             visiblePixels++;
                         }
 
                         if (visiblePixels === 0) {
-                            renderLogo(true); // пусте/прозоре — про всяк випадок з плашкою
+                            renderLogo(true);
                             return;
                         }
 
                         var avgBrightness = totalBrightness / visiblePixels;
-                        // Якщо середня яскравість < 100 — лого темне, треба плашка
-                        // Поріг можна крутити: 80 = темніше, 130 = світліше
-                        renderLogo(avgBrightness < 100);
+                        var avgSaturation = totalSaturation / visiblePixels;
+
+                        // Плашка потрібна, тільки якщо лого ТЕМНЕ і МАЛОНАСИЧЕНЕ (сіре/чорне)
+                        // Синє/червоне має високу saturation -> плашка не потрібна
+                        var needBadge = (avgBrightness < 120) && (avgSaturation < 0.35);
+
+                        renderLogo(needBadge);
                     } catch (e) {
                         // Якщо CORS заважає — просто рендеримо без плашки
                         renderLogo(false);
