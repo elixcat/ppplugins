@@ -7,11 +7,11 @@
     framework: ''
   };
 
-  var luid = Lampa.Storage.get('lampac_unic_id', '');
-  if (!luid) {
-    luid = Lampa.Utils.uid(8).toLowerCase();
-    Lampa.Storage.set('lampac_unic_id', luid);
-  }
+  // ID як у робочого sisi2 — сервер lom.my.to пускає box_mac=lom
+  var LOM_ID = 'lom';
+  Lampa.Storage.set('sisi_unic_id', LOM_ID);
+  Lampa.Storage.set('lampac_unic_id', LOM_ID);
+  var luid = LOM_ID;
 
   Lampa.Lang.add({
     lampac_sisiname: {
@@ -238,7 +238,7 @@ window.rch_nws[hostkey].Registry = function RchRegistry(client, startConnection)
   }
 
   function modal(text) {
-    var id = Lampa.Storage.get('sisi_unic_id', '').toLowerCase();
+    var id = (Lampa.Storage.get('sisi_unic_id', LOM_ID) || LOM_ID).toLowerCase();
     var controller = Lampa.Controller.enabled().name;
     var content = sisiModalHtml(text, id);
     Lampa.Modal.open({
@@ -1172,8 +1172,8 @@ this.view = function(params, success, error, waiting_rch) {
         if (Defined.use_api == 'lampac' && u.indexOf(Defined.localhost.replace('/sisi', '')) == -1) return u;
       }
 
-      var unic_id = Lampa.Storage.get('sisi_unic_id', '');
-      var uid = Lampa.Storage.get('lampac_unic_id', '');
+      var unic_id = Lampa.Storage.get('sisi_unic_id', LOM_ID) || LOM_ID;
+      var uid = Lampa.Storage.get('lampac_unic_id', LOM_ID) || LOM_ID;
       var email = Lampa.Storage.get('account', {}).email;
 
       if (u.indexOf('box_mac=') == -1) u = Lampa.Utils.addUrlComponent(u, 'box_mac=' + unic_id);
@@ -1376,8 +1376,8 @@ this.view = function(params, success, error, waiting_rch) {
       if (u.replace(/[\?&]+$/, '').indexOf('http://lom.my.to'.replace(/https:/, '').replace(/http:/, '')) === -1)
         return u;
 
-      var unic_id = Lampa.Storage.get('sisi_unic_id', '');
-      var uid = Lampa.Storage.get('lampac_unic_id', '');
+      var unic_id = Lampa.Storage.get('sisi_unic_id', LOM_ID) || LOM_ID;
+      var uid = Lampa.Storage.get('lampac_unic_id', LOM_ID) || LOM_ID;
       var email = Lampa.Storage.get('account', {}).email;
 
       if (u.indexOf('box_mac=') === -1)
@@ -1769,12 +1769,9 @@ this.view = function(params, success, error, waiting_rch) {
   function startPlugin() {
     injectSisiAssets();
     window['plugin_sisi_' + Defined.use_api + '_ready'] = true;
-    var unic_id = Lampa.Storage.get('sisi_unic_id', '');
-
-    if (!unic_id) {
-      unic_id = Lampa.Utils.uid(8).toLowerCase();
-      Lampa.Storage.set('sisi_unic_id', unic_id);
-    }
+    // Фіксований id для lom.my.to
+    Lampa.Storage.set('sisi_unic_id', LOM_ID);
+    var unic_id = LOM_ID;
 
     Lampa.Component.add('sisi_' + Defined.use_api, Sisi);
     Lampa.Component.add('sisi_view_' + Defined.use_api, View);
