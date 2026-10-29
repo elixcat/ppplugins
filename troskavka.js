@@ -3,7 +3,7 @@
 
   var Defined = {
     use_api: 'lampac',
-    localhost: 'http://31.129.234.181/sisi',
+    localhost: 'http://lom.my.to/sisi',
     framework: ''
   };
 
@@ -50,7 +50,7 @@
   }
 }
 
-var hostkey = 'http://31.129.234.181'.replace('http://', '').replace('https://', '');
+var hostkey = 'http://lom.my.to'.replace('http://', '').replace('https://', '');
 
 if (!window.rch_nws || !window.rch_nws[hostkey]) {
   if (!window.rch_nws) window.rch_nws = {};
@@ -75,7 +75,7 @@ window.rch_nws[hostkey].typeInvoke = function rchtypeInvoke(host, call) {
     if (Lampa.Platform.is('android') || Lampa.Platform.is('tizen')) check(true);
     else {
       var net = new Lampa.Reguest();
-      net.silent('http://31.129.234.181'.indexOf(location.host) >= 0 ? 'https://github.com/' : host + '/cors/check', function() {
+      net.silent('http://lom.my.to'.indexOf(location.host) >= 0 ? 'https://github.com/' : host + '/cors/check', function() {
         check(true);
       }, function() {
         check(false);
@@ -87,7 +87,7 @@ window.rch_nws[hostkey].typeInvoke = function rchtypeInvoke(host, call) {
 };
 
 window.rch_nws[hostkey].Registry = function RchRegistry(client, startConnection) {
-  window.rch_nws[hostkey].typeInvoke('http://31.129.234.181', function() {
+  window.rch_nws[hostkey].typeInvoke('http://lom.my.to', function() {
 
     client.invoke("RchRegistry", {
       host: location.host,
@@ -114,7 +114,7 @@ window.rch_nws[hostkey].Registry = function RchRegistry(client, startConnection)
 	  
 	  function sendResult(uri, html) {
 	    $.ajax({
-	      url: 'http://31.129.234.181/rch/' + uri + '?id=' + rchId,
+	      url: 'http://lom.my.to/rch/' + uri + '?id=' + rchId,
 	      type: 'POST',
 	      data: html,
 	      async: true,
@@ -196,7 +196,7 @@ window.rch_nws[hostkey].Registry = function RchRegistry(client, startConnection)
   });
 };
 
-  window.rch_nws[hostkey].typeInvoke('http://31.129.234.181', function() {});
+  window.rch_nws[hostkey].typeInvoke('http://lom.my.to', function() {});
 
   function rchInvoke(json, call) {
     if (!window.nwsClient) 
@@ -229,7 +229,7 @@ window.rch_nws[hostkey].Registry = function RchRegistry(client, startConnection)
 
   function rchRun(json, call) {
     if (typeof NativeWsClient == 'undefined') {
-      Lampa.Utils.putScript(["http://31.129.234.181/js/nws-client-es5.js?v21042026"], function() {}, false, function() {
+      Lampa.Utils.putScript(["http://lom.my.to/js/nws-client-es5.js?v21042026"], function() {}, false, function() {
         rchInvoke(json, call);
       }, true);
     } else {
@@ -1373,7 +1373,7 @@ this.view = function(params, success, error, waiting_rch) {
       u = u.replace(/^[\?&]+/, '');
       u = u.replace(/[\?&]+$/, '');
 
-      if (u.replace(/[\?&]+$/, '').indexOf('http://31.129.234.181'.replace(/https:/, '').replace(/http:/, '')) === -1)
+      if (u.replace(/[\?&]+$/, '').indexOf('http://lom.my.to'.replace(/https:/, '').replace(/http:/, '')) === -1)
         return u;
 
       var unic_id = Lampa.Storage.get('sisi_unic_id', '');
@@ -1620,7 +1620,7 @@ this.view = function(params, success, error, waiting_rch) {
     search: function search(params, oncomplite) {
       network.timeout(REQUEST_TIMEOUT);
       network.silent(
-        'http://31.129.234.181/rch/check/connected',
+        'http://lom.my.to/rch/check/connected',
         function (json) {
           if (json.rch) {
             rchRun(json, function () {
