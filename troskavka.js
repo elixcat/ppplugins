@@ -3,15 +3,15 @@
 
   var Defined = {
     use_api: 'lampac',
-    localhost: 'http://lom.my.to/sisi',
+    localhost: 'https://l.pashai.ru/sisi',
     framework: ''
   };
 
-  // ID як у робочого sisi2 — сервер lom.my.to пускає box_mac=lom
-  var LOM_ID = 'lom';
-  Lampa.Storage.set('sisi_unic_id', LOM_ID);
-  Lampa.Storage.set('lampac_unic_id', LOM_ID);
-  var luid = LOM_ID;
+  var luid = Lampa.Storage.get('lampac_unic_id', '');
+  if (!luid) {
+    luid = Lampa.Utils.uid(8).toLowerCase();
+    Lampa.Storage.set('lampac_unic_id', luid);
+  }
 
   Lampa.Lang.add({
     lampac_sisiname: {
@@ -50,7 +50,7 @@
   }
 }
 
-var hostkey = 'http://lom.my.to'.replace('http://', '').replace('https://', '');
+var hostkey = 'https://l.pashai.ru'.replace('http://', '').replace('https://', '');
 
 if (!window.rch_nws || !window.rch_nws[hostkey]) {
   if (!window.rch_nws) window.rch_nws = {};
@@ -75,7 +75,7 @@ window.rch_nws[hostkey].typeInvoke = function rchtypeInvoke(host, call) {
     if (Lampa.Platform.is('android') || Lampa.Platform.is('tizen')) check(true);
     else {
       var net = new Lampa.Reguest();
-      net.silent('http://lom.my.to'.indexOf(location.host) >= 0 ? 'https://github.com/' : host + '/cors/check', function() {
+      net.silent('https://l.pashai.ru'.indexOf(location.host) >= 0 ? 'https://github.com/' : host + '/cors/check', function() {
         check(true);
       }, function() {
         check(false);
@@ -87,7 +87,7 @@ window.rch_nws[hostkey].typeInvoke = function rchtypeInvoke(host, call) {
 };
 
 window.rch_nws[hostkey].Registry = function RchRegistry(client, startConnection) {
-  window.rch_nws[hostkey].typeInvoke('http://lom.my.to', function() {
+  window.rch_nws[hostkey].typeInvoke('https://l.pashai.ru', function() {
 
     client.invoke("RchRegistry", {
       host: location.host,
@@ -114,7 +114,7 @@ window.rch_nws[hostkey].Registry = function RchRegistry(client, startConnection)
 	  
 	  function sendResult(uri, html) {
 	    $.ajax({
-	      url: 'http://lom.my.to/rch/' + uri + '?id=' + rchId,
+	      url: 'https://l.pashai.ru/rch/' + uri + '?id=' + rchId,
 	      type: 'POST',
 	      data: html,
 	      async: true,
@@ -196,7 +196,7 @@ window.rch_nws[hostkey].Registry = function RchRegistry(client, startConnection)
   });
 };
 
-  window.rch_nws[hostkey].typeInvoke('http://lom.my.to', function() {});
+  window.rch_nws[hostkey].typeInvoke('https://l.pashai.ru', function() {});
 
   function rchInvoke(json, call) {
     if (!window.nwsClient) 
@@ -229,7 +229,7 @@ window.rch_nws[hostkey].Registry = function RchRegistry(client, startConnection)
 
   function rchRun(json, call) {
     if (typeof NativeWsClient == 'undefined') {
-      Lampa.Utils.putScript(["http://lom.my.to/js/nws-client-es5.js?v21042026"], function() {}, false, function() {
+      Lampa.Utils.putScript(["https://l.pashai.ru/js/nws-client-es5.js?v21042026"], function() {}, false, function() {
         rchInvoke(json, call);
       }, true);
     } else {
@@ -238,7 +238,7 @@ window.rch_nws[hostkey].Registry = function RchRegistry(client, startConnection)
   }
 
   function modal(text) {
-    var id = (Lampa.Storage.get('sisi_unic_id', LOM_ID) || LOM_ID).toLowerCase();
+    var id = Lampa.Storage.get('sisi_unic_id', '').toLowerCase();
     var controller = Lampa.Controller.enabled().name;
     var content = sisiModalHtml(text, id);
     Lampa.Modal.open({
@@ -1172,8 +1172,8 @@ this.view = function(params, success, error, waiting_rch) {
         if (Defined.use_api == 'lampac' && u.indexOf(Defined.localhost.replace('/sisi', '')) == -1) return u;
       }
 
-      var unic_id = Lampa.Storage.get('sisi_unic_id', LOM_ID) || LOM_ID;
-      var uid = Lampa.Storage.get('lampac_unic_id', LOM_ID) || LOM_ID;
+      var unic_id = Lampa.Storage.get('sisi_unic_id', '');
+      var uid = Lampa.Storage.get('lampac_unic_id', '');
       var email = Lampa.Storage.get('account', {}).email;
 
       if (u.indexOf('box_mac=') == -1) u = Lampa.Utils.addUrlComponent(u, 'box_mac=' + unic_id);
@@ -1373,11 +1373,11 @@ this.view = function(params, success, error, waiting_rch) {
       u = u.replace(/^[\?&]+/, '');
       u = u.replace(/[\?&]+$/, '');
 
-      if (u.replace(/[\?&]+$/, '').indexOf('http://lom.my.to'.replace(/https:/, '').replace(/http:/, '')) === -1)
+      if (u.replace(/[\?&]+$/, '').indexOf('https://l.pashai.ru'.replace(/https:/, '').replace(/http:/, '')) === -1)
         return u;
 
-      var unic_id = Lampa.Storage.get('sisi_unic_id', LOM_ID) || LOM_ID;
-      var uid = Lampa.Storage.get('lampac_unic_id', LOM_ID) || LOM_ID;
+      var unic_id = Lampa.Storage.get('sisi_unic_id', '');
+      var uid = Lampa.Storage.get('lampac_unic_id', '');
       var email = Lampa.Storage.get('account', {}).email;
 
       if (u.indexOf('box_mac=') === -1)
@@ -1620,7 +1620,7 @@ this.view = function(params, success, error, waiting_rch) {
     search: function search(params, oncomplite) {
       network.timeout(REQUEST_TIMEOUT);
       network.silent(
-        'http://lom.my.to/rch/check/connected',
+        'https://l.pashai.ru/rch/check/connected',
         function (json) {
           if (json.rch) {
             rchRun(json, function () {
@@ -1769,9 +1769,12 @@ this.view = function(params, success, error, waiting_rch) {
   function startPlugin() {
     injectSisiAssets();
     window['plugin_sisi_' + Defined.use_api + '_ready'] = true;
-    // Фіксований id для lom.my.to
-    Lampa.Storage.set('sisi_unic_id', LOM_ID);
-    var unic_id = LOM_ID;
+    var unic_id = Lampa.Storage.get('sisi_unic_id', '');
+
+    if (!unic_id) {
+      unic_id = Lampa.Utils.uid(8).toLowerCase();
+      Lampa.Storage.set('sisi_unic_id', unic_id);
+    }
 
     Lampa.Component.add('sisi_' + Defined.use_api, Sisi);
     Lampa.Component.add('sisi_view_' + Defined.use_api, View);
