@@ -7,11 +7,16 @@
     framework: ''
   };
 
-  var luid = Lampa.Storage.get('lampac_unic_id', '');
-  if (!luid) {
-    luid = Lampa.Utils.uid(8).toLowerCase();
-    Lampa.Storage.set('lampac_unic_id', luid);
+  // Стабільний id пристрою (для accsdb на сервері)
+  var DEVICE_ID = Lampa.Storage.get('sisi_device_id', '');
+  if (!DEVICE_ID) {
+    DEVICE_ID = Lampa.Utils.uid(8).toLowerCase();
+    Lampa.Storage.set('sisi_device_id', DEVICE_ID);
   }
+  Lampa.Storage.set('sisi_unic_id', DEVICE_ID);
+  Lampa.Storage.set('lampac_unic_id', DEVICE_ID);
+  var luid = DEVICE_ID;
+  var LOM_ID = DEVICE_ID; // сумісність зі старими зверненнями до LOM_ID
 
   Lampa.Lang.add({
     lampac_sisiname: {
@@ -238,7 +243,7 @@ window.rch_nws[hostkey].Registry = function RchRegistry(client, startConnection)
   }
 
   function modal(text) {
-    var id = Lampa.Storage.get('sisi_unic_id', '').toLowerCase();
+    var id = (Lampa.Storage.get('sisi_unic_id', LOM_ID) || LOM_ID).toLowerCase();
     var controller = Lampa.Controller.enabled().name;
     var content = sisiModalHtml(text, id);
     Lampa.Modal.open({
@@ -606,8 +611,39 @@ function menu$2(target, card_data) {
     fixList: fixList,
     menu: menu$2
   };
-// ── Кастомні папки (гібрид: uid локально, дані з серверних закладок) ──
+// ── Кастомні папки (гібрид: uid + локальний знімок) ──
   var FOLDERS_KEY = 'sisi_custom_folders';
+
+  function folderSnapshot(element) {
+    if (!element) return null;
+    return {
+      name: element.name || element.title || '',
+      video: element.video || '',
+      picture: element.picture || element.img || element.poster || '',
+      preview: element.preview || '',
+      time: element.time || element.quality || '',
+      json: !!element.json,
+      related: element.related || false,
+      video_reserve: element.video_reserve || '',
+      qualitys: element.qualitys || null,
+      qualitys_proxy: element.qualitys_proxy || null,
+      model: element.model || null,
+      bookmark: {
+        uid: (element.bookmark && element.bookmark.uid) ? element.bookmark.uid : '',
+        site: (element.bookmark && element.bookmark.site) ? element.bookmark.site : '',
+        href: (element.bookmark && element.bookmark.href) ? element.bookmark.href : ''
+      }
+    };
+  }
+
+  function folderItemKey(item) {
+    if (!item) return null;
+    if (typeof item === 'string') return 'uid:' + item;
+    if (item.bookmark && item.bookmark.uid) return 'uid:' + item.bookmark.uid;
+    if (item.video) return 'video:' + item.video;
+    if (item.name) return 'name:' + String(item.name).toLowerCase();
+    return null;
+  }
 
   function foldersLoad() {
     var data = Lampa.Storage.get(FOLDERS_KEY, null);
@@ -616,11 +652,16 @@ function menu$2(target, card_data) {
     }
     if (!data.items) data.items = {};
 
-    // Міграція зі старого формату (повні об'єкти → uid)
+    // Міграція: голий uid-рядок → мінімальний знімок
     Object.keys(data.items).forEach(function (fid) {
       data.items[fid] = (data.items[fid] || []).map(function (v) {
-        if (typeof v === 'string') return v;
-        if (v && v.bookmark && v.bookmark.uid) return v.bookmark.uid;
+        if (typeof v === 'string') {
+          return { bookmark: { uid: v }, name: '', video: '', picture: '', _legacy: true };
+        }
+        if (v && typeof v === 'object') {
+          if (!v.bookmark) v.bookmark = { uid: '' };
+          return v;
+        }
         return null;
       }).filter(Boolean);
     });
@@ -636,9 +677,17 @@ function menu$2(target, card_data) {
     return foldersLoad().folders;
   }
 
-  function folderGetUids(folderId) {
+  function folderGetItems(folderId) {
     var data = foldersLoad();
     return data.items[folderId] || [];
+  }
+
+  // сумісність: раніше очікували масив uid
+  function folderGetUids(folderId) {
+    return folderGetItems(folderId).map(function (it) {
+      if (typeof it === 'string') return it;
+      return (it.bookmark && it.bookmark.uid) ? it.bookmark.uid : null;
+    }).filter(Boolean);
   }
 
   function folderVideoUid(element) {
@@ -648,90 +697,105 @@ function menu$2(target, card_data) {
     return null;
   }
 
-  function folderAddVideo(folderId, element, done) {
-    function saveUid(uid) {
-      if (!uid) {
-        if (done) done(false);
-        return;
+  function folderFindLocalIndex(list, element) {
+    var key = folderItemKey(folderSnapshot(element) || element);
+    if (!key) return -1;
+    for (var i = 0; i < list.length; i++) {
+      if (folderItemKey(list[i]) === key) return i;
+    }
+    // додатково по uid
+    var uid = folderVideoUid(element);
+    if (uid) {
+      for (var j = 0; j < list.length; j++) {
+        var it = list[j];
+        if (typeof it === 'string' && it === uid) return j;
+        if (it && it.bookmark && it.bookmark.uid === uid) return j;
       }
+    }
+    return -1;
+  }
+
+  function folderAddVideo(folderId, element, done) {
+    function saveLocal() {
       var data = foldersLoad();
       if (!data.items[folderId]) data.items[folderId] = [];
 
-      var exists = data.items[folderId].indexOf(uid) !== -1;
-      if (!exists) {
-        data.items[folderId].unshift(uid);
+      var snap = folderSnapshot(element);
+      if (!snap) {
+        if (done) done(false);
+        return;
+      }
+
+      var idx = folderFindLocalIndex(data.items[folderId], element);
+      if (idx === -1) {
+        data.items[folderId].unshift(snap);
         foldersSave(data);
-      }
-      if (done) done(!exists);
-    }
-
-    var uid = folderVideoUid(element);
-
-    // Якщо вже є uid — вважаємо, що в закладках (або uid уже відомий)
-    if (uid) {
-      // На всяк випадок докидаємо на сервер (якщо вже є — сервер просто ігнорує дубль)
-      if (element.bookmark) {
-        Api.bookmark(element, true, function () {
-          saveUid(uid);
-        });
+        if (done) done(true);
       } else {
-        saveUid(uid);
+        // оновлюємо знімок (свіжіше посилання / uid)
+        data.items[folderId][idx] = snap;
+        foldersSave(data);
+        if (done) done(false);
       }
-      return;
     }
 
-    // Немає uid — спочатку додаємо в серверні закладки
+    // Паралельно намагаємось покласти на серверні закладки (для свіжих URL)
     if (!element.bookmark) element.bookmark = {};
 
-    Api.bookmark(element, true, function (ok) {
-      // Після add uid може з’явитись у відповіді або вже був порахований клієнтом
-      var newUid = folderVideoUid(element);
-      if (newUid) {
-        saveUid(newUid);
-      } else {
-        // Fallback: перечитуємо закладки і шукаємо по назві/відео
-        folderFindUidInBookmarks(element, function (foundUid) {
-          saveUid(foundUid);
-        });
-      }
-    });
+    try {
+      Api.bookmark(element, true, function () {
+        saveLocal();
+      });
+    } catch (e) {
+      saveLocal();
+    }
   }
 
-function folderRemoveVideo(folderId, element, done) {
-    var uid = folderVideoUid(element);
-    if (!uid) {
-      if (done) done(false);
-      return false;
-    }
+  function folderUidStillUsed(uid, exceptFolderId, data) {
+    if (!uid) return false;
+    var used = false;
+    Object.keys(data.items).forEach(function (fid) {
+      if (fid === exceptFolderId) return;
+      (data.items[fid] || []).forEach(function (it) {
+        if (typeof it === 'string' && it === uid) used = true;
+        if (it && it.bookmark && it.bookmark.uid === uid) used = true;
+      });
+    });
+    return used;
+  }
 
+  function folderRemoveVideo(folderId, element, done) {
     var data = foldersLoad();
     if (!data.items[folderId]) {
       if (done) done(false);
       return false;
     }
 
-    data.items[folderId] = data.items[folderId].filter(function (id) {
-      return id !== uid;
-    });
+    var uid = folderVideoUid(element);
+    var before = data.items[folderId].length;
+    var idx = folderFindLocalIndex(data.items[folderId], element);
+
+    if (idx !== -1) {
+      data.items[folderId].splice(idx, 1);
+    } else if (uid) {
+      data.items[folderId] = data.items[folderId].filter(function (it) {
+        if (typeof it === 'string') return it !== uid;
+        return !(it && it.bookmark && it.bookmark.uid === uid);
+      });
+    }
+
     foldersSave(data);
+    var removed = data.items[folderId].length < before;
 
-    // Чи є цей uid ще в якійсь іншій папці?
-    var stillUsed = false;
-    Object.keys(data.items).forEach(function (fid) {
-      if (fid === folderId) return;
-      if ((data.items[fid] || []).indexOf(uid) !== -1) stillUsed = true;
-    });
-
-    // З серверних закладок прибираємо тільки якщо більше ніде не використовується
-    if (!stillUsed && element.bookmark && element.bookmark.uid) {
+    if (removed && uid && !folderUidStillUsed(uid, folderId, data) && element.bookmark && element.bookmark.uid) {
       Api.bookmark(element, false, function () {
         if (done) done(true);
       });
     } else {
-      if (done) done(true);
+      if (done) done(removed);
     }
 
-    return true;
+    return removed;
   }
 
   function folderCreate(title) {
@@ -765,7 +829,6 @@ function folderRemoveVideo(folderId, element, done) {
     return Defined.localhost.replace(/\/?$/, '') + '/bookmarks';
   }
 
-  // Завантажити всі сторінки закладок з сервера
   function loadAllBookmarks(done) {
     var network = new Lampa.Reguest();
     network.timeout(REQUEST_TIMEOUT);
@@ -819,20 +882,69 @@ function folderRemoveVideo(folderId, element, done) {
   }
 
   function folderBuildViewJson(folderId, title, bookmarksList) {
-    var uids = folderGetUids(folderId);
-    var map = {};
+    var items = folderGetItems(folderId);
+    var byUid = {};
+    var byVideo = {};
+    var byName = {};
 
     (bookmarksList || []).forEach(function (item) {
-      if (item.bookmark && item.bookmark.uid) {
-        map[item.bookmark.uid] = item;
-      }
+      if (item.bookmark && item.bookmark.uid) byUid[item.bookmark.uid] = item;
+      if (item.video) byVideo[item.video] = item;
+      if (item.name) byName[String(item.name).toLowerCase()] = item;
     });
 
-    // Порядок як у папці
     var list = [];
-    uids.forEach(function (uid) {
-      if (map[uid]) list.push(map[uid]);
+    var data = foldersLoad();
+    var changed = false;
+
+    items.forEach(function (snap, index) {
+      var live = null;
+      var uid = (snap && snap.bookmark && snap.bookmark.uid) ? snap.bookmark.uid : (typeof snap === 'string' ? snap : '');
+
+      if (uid && byUid[uid]) live = byUid[uid];
+      else if (snap && snap.video && byVideo[snap.video]) live = byVideo[snap.video];
+      else if (snap && snap.name && byName[String(snap.name).toLowerCase()]) live = byName[String(snap.name).toLowerCase()];
+
+      if (live) {
+        list.push(live);
+        // підтягуємо свіжіший знімок локально
+        var fresh = folderSnapshot(live);
+        if (fresh && data.items[folderId] && data.items[folderId][index]) {
+          data.items[folderId][index] = fresh;
+          changed = true;
+        }
+      } else if (snap && !snap._legacy) {
+        // Локальний знімок — папка не порожніє навіть без сервера
+        list.push({
+          name: snap.name,
+          title: snap.name,
+          video: snap.video,
+          picture: snap.picture,
+          img: snap.picture,
+          poster: snap.picture,
+          preview: snap.preview,
+          time: snap.time,
+          quality: snap.time,
+          json: snap.json,
+          related: snap.related,
+          video_reserve: snap.video_reserve,
+          qualitys: snap.qualitys,
+          qualitys_proxy: snap.qualitys_proxy,
+          model: snap.model,
+          bookmark: snap.bookmark || {}
+        });
+      } else if (snap && snap._legacy && (snap.video || snap.name)) {
+        list.push({
+          name: snap.name,
+          video: snap.video,
+          picture: snap.picture,
+          bookmark: snap.bookmark || {}
+        });
+      }
+      // чистий legacy uid без даних — пропускаємо
     });
+
+    if (changed) foldersSave(data);
 
     var json = {
       results: Utils.fixList(list),
@@ -865,6 +977,7 @@ function folderRemoveVideo(folderId, element, done) {
 
     return Lampa.Utils.addSource(json, SISI_SOURCE);
   }
+
   function sisiCardHandlers() {
     return {
       onMenu: function (target, card_data) {
@@ -1172,8 +1285,8 @@ this.view = function(params, success, error, waiting_rch) {
         if (Defined.use_api == 'lampac' && u.indexOf(Defined.localhost.replace('/sisi', '')) == -1) return u;
       }
 
-      var unic_id = Lampa.Storage.get('sisi_unic_id', '');
-      var uid = Lampa.Storage.get('lampac_unic_id', '');
+      var unic_id = Lampa.Storage.get('sisi_unic_id', LOM_ID) || LOM_ID;
+      var uid = Lampa.Storage.get('lampac_unic_id', LOM_ID) || LOM_ID;
       var email = Lampa.Storage.get('account', {}).email;
 
       if (u.indexOf('box_mac=') == -1) u = Lampa.Utils.addUrlComponent(u, 'box_mac=' + unic_id);
@@ -1376,8 +1489,8 @@ this.view = function(params, success, error, waiting_rch) {
       if (u.replace(/[\?&]+$/, '').indexOf('https://l.pashai.ru'.replace(/https:/, '').replace(/http:/, '')) === -1)
         return u;
 
-      var unic_id = Lampa.Storage.get('sisi_unic_id', '');
-      var uid = Lampa.Storage.get('lampac_unic_id', '');
+      var unic_id = Lampa.Storage.get('sisi_unic_id', LOM_ID) || LOM_ID;
+      var uid = Lampa.Storage.get('lampac_unic_id', LOM_ID) || LOM_ID;
       var email = Lampa.Storage.get('account', {}).email;
 
       if (u.indexOf('box_mac=') === -1)
@@ -1769,12 +1882,9 @@ this.view = function(params, success, error, waiting_rch) {
   function startPlugin() {
     injectSisiAssets();
     window['plugin_sisi_' + Defined.use_api + '_ready'] = true;
-    var unic_id = Lampa.Storage.get('sisi_unic_id', '');
-
-    if (!unic_id) {
-      unic_id = Lampa.Utils.uid(8).toLowerCase();
-      Lampa.Storage.set('sisi_unic_id', unic_id);
-    }
+    Lampa.Storage.set('sisi_unic_id', DEVICE_ID);
+    Lampa.Storage.set('lampac_unic_id', DEVICE_ID);
+    var unic_id = DEVICE_ID;
 
     Lampa.Component.add('sisi_' + Defined.use_api, Sisi);
     Lampa.Component.add('sisi_view_' + Defined.use_api, View);
