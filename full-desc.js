@@ -9,9 +9,10 @@
     // ============================================================
     var manifest = {
         type: 'video',
-        version: '1.1.0',
+        version: '1.2.0',
         name: 'Full Desc Expander',
         description: 'Розширює вікно опису фільму, якщо текст довгий',
+        author: '@elixcat',
         component: 'full_desc_expander'
     };
 
@@ -32,10 +33,23 @@
             be: 'Пашырае акно апісання фільма, калі тэкст доўгі і абрэзаецца',
             kk: 'Мәтін ұзын болса және қиылып кетсе, фильм сипаттамасының терезесін кеңейтеді',
             en: 'Expands the movie description window when the text is long and truncated'
+        },
+        scaleName: {
+            uk: 'Масштаб опису',
+            ru: 'Масштаб описания',
+            be: 'Маштаб апісання',
+            kk: 'Сипаттама масштабы',
+            en: 'Description Scale'
+        },
+        scaleDescr: {
+            uk: 'Розмір тексту опису фільму',
+            ru: 'Размер текста описания фильма',
+            be: 'Памер тэксту апісання фільма',
+            kk: 'Фильм сипаттамасы мәтінінің өлшемі',
+            en: 'Movie description text size'
         }
     };
 
-    // Визначаємо поточну мову Lampa
     function getLang() {
         try {
             if (window.Lampa && Lampa.Storage) {
@@ -54,7 +68,7 @@
     }
 
     // ============================================================
-    // ОНОВЛЕННЯ МЕТАДАНИХ ПЛАГІНА В СПИСКУ (як у premconnect)
+    // ОНОВЛЕННЯ МЕТАДАНИХ ПЛАГІНА В СПИСКУ
     // ============================================================
     function updatePluginMeta() {
         if (!window.Lampa || !Lampa.Plugins || !Lampa.Plugins.get) return;
@@ -69,7 +83,6 @@
                 var plugin = plugins[i];
                 var url = String(plugin && plugin.url || '');
 
-                // Шукаємо наш плагін за URL (тепер full-desc.js)
                 if (/\/full-desc(?:\.v\d+)?\.js(?:[?#].*)?$/i.test(url)) {
                     if (plugin.name !== name) {
                         plugin.name = name;
@@ -91,7 +104,19 @@
     }
 
     // ============================================================
-    // CSS ДЛЯ РОЗШИРЕННЯ ОПИСУ
+    // ГРАДАЦІЇ МАСШТАБУ 70%–200% (крок 10%)
+    // ============================================================
+    function getScaleValues() {
+        var vals = {};
+        for (var i = 7; i <= 20; i++) {
+            var val = (i / 10).toString(); // "0.7" ... "2"
+            vals[val] = (i * 10) + "%";    // "70%" ... "200%"
+        }
+        return vals;
+    }
+
+    // ============================================================
+    // CSS ДЛЯ РОЗШИРЕННЯ ОПИСУ + МАСШТАБ
     // ============================================================
     function injectCSS() {
         if (document.getElementById('fde-style')) return;
@@ -125,6 +150,26 @@
             }
         `;
         document.head.appendChild(style);
+    }
+
+    // ============================================================
+    // ЗАСТОСУВАННЯ МАСШТАБУ ДО ОПИСУ
+    // ============================================================
+    function applyScale(html) {
+        var scale = 1;
+        try {
+            scale = parseFloat(Lampa.Storage.get('full_desc_scale', '1')) || 1;
+        } catch (e) {}
+
+        var $html = $(html);
+
+        var $descriptions = $html.find(
+            '.full-descr__text, .full-start__desc, .full-start-new__desc, .full-start__text, .info__desc'
+        );
+
+        $descriptions.each(function () {
+            $(this).css('font-size', (scale * 100) + '%');
+        });
     }
 
     // ============================================================
@@ -176,6 +221,32 @@
                 });
             }
         });
+
+        // Застосовуємо масштаб
+        applyScale($html);
+    }
+
+    // ============================================================
+    // НАЛАШТУВАННЯ В КОМПОНЕНТІ "ІНТЕРФЕЙС"
+    // ============================================================
+    function addSettings() {
+        if (!window.Lampa || !Lampa.SettingsApi) return;
+        if (window.fde_settings_added) return;
+        window.fde_settings_added = true;
+
+        Lampa.SettingsApi.addParam({
+            component: 'interface',
+            param: {
+                name: 'full_desc_scale',
+                type: 'select',
+                values: getScaleValues(),
+                default: '1'
+            },
+            field: {
+                name: t('scaleName'),
+                description: t('scaleDescr')
+            }
+        });
     }
 
     // ============================================================
@@ -187,8 +258,8 @@
         }
 
         updatePluginMeta();
-
         injectCSS();
+        addSettings();
 
         setTimeout(updatePluginMeta, 1000);
         setTimeout(updatePluginMeta, 3000);
