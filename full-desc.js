@@ -79,8 +79,8 @@
                         plugin.descr = descr;
                         changed = true;
                     }
-                    if (plugin.author !== 'LampaUA') {
-                        plugin.author = 'LampaUA';
+                    if (plugin.author !== '@elixcat') {
+                        plugin.author = '@elixcat';
                         changed = true;
                     }
                 }
