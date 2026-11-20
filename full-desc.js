@@ -9,7 +9,7 @@
     // ============================================================
     var manifest = {
         type: 'video',
-        version: '1.2.0',
+        version: '1.3.0',
         name: 'Full Desc Expander',
         description: 'Розширює вікно опису фільму, якщо текст довгий',
         author: '@elixcat',
@@ -49,6 +49,8 @@
             en: 'Movie description text size'
         }
     };
+
+    var DEFAULT_SCALE = '1.4'; // 140%
 
     function getLang() {
         try {
@@ -116,7 +118,7 @@
     }
 
     // ============================================================
-    // CSS ДЛЯ РОЗШИРЕННЯ ОПИСУ + МАСШТАБ
+    // CSS ДЛЯ РОЗШИРЕННЯ ОПИСУ
     // ============================================================
     function injectCSS() {
         if (document.getElementById('fde-style')) return;
@@ -156,9 +158,9 @@
     // ЗАСТОСУВАННЯ МАСШТАБУ ДО ОПИСУ
     // ============================================================
     function applyScale(html) {
-        var scale = 1;
+        var scale = 1.4;
         try {
-            scale = parseFloat(Lampa.Storage.get('full_desc_scale', '1')) || 1;
+            scale = parseFloat(Lampa.Storage.get('full_desc_scale', DEFAULT_SCALE)) || 1.4;
         } catch (e) {}
 
         var $html = $(html);
@@ -240,11 +242,18 @@
                 name: 'full_desc_scale',
                 type: 'select',
                 values: getScaleValues(),
-                default: '1'
+                default: DEFAULT_SCALE
             },
             field: {
                 name: t('scaleName'),
                 description: t('scaleDescr')
+            },
+            onChange: function () {
+                // Одразу застосовуємо новий масштаб до відкритого вікна фільму
+                var $active = $('.activity--active');
+                if ($active.length) {
+                    applyScale($active);
+                }
             }
         });
     }
