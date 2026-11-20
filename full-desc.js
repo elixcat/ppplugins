@@ -41,7 +41,6 @@
             if (window.Lampa && Lampa.Storage) {
                 var l = Lampa.Storage.get('language', 'uk');
                 if (l && LANG.name[l]) return l;
-                // Lampa іноді зберігає 'ru'/'uk'/'en', а для біл/каз може бути інший код
                 if (l === 'be' || l === 'by') return 'be';
                 if (l === 'kk' || l === 'kz') return 'kk';
             }
@@ -70,8 +69,8 @@
                 var plugin = plugins[i];
                 var url = String(plugin && plugin.url || '');
 
-                // Шукаємо наш плагін за URL
-                if (/\/full-desc-expander(?:\.v\d+)?\.js(?:[?#].*)?$/i.test(url)) {
+                // Шукаємо наш плагін за URL (тепер full-desc.js)
+                if (/\/full-desc(?:\.v\d+)?\.js(?:[?#].*)?$/i.test(url)) {
                     if (plugin.name !== name) {
                         plugin.name = name;
                         changed = true;
@@ -183,18 +182,14 @@
     // ІНІЦІАЛІЗАЦІЯ
     // ============================================================
     function init() {
-        // Реєструємо маніфест
         if (window.Lampa && Lampa.Manifest) {
             Lampa.Manifest.plugins = manifest;
         }
 
-        // Оновлюємо назву/опис у списку плагінів (як premconnect)
         updatePluginMeta();
 
         injectCSS();
 
-        // Повторно оновлюємо метадані — про всяк випадок, якщо Lampa
-        // перезаписала їх після завантаження
         setTimeout(updatePluginMeta, 1000);
         setTimeout(updatePluginMeta, 3000);
 
