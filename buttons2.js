@@ -1894,7 +1894,16 @@
                 });
             }, 200);
         });
-        toolbar.append(upBtn).append(downBtn).append(resetBtn).append(colorBtn).append(createFolderBtn);
+        var toggleEditorBtn = $('<div class="buttons-editor-tool-btn selector" tabindex="0" title="Приховати кнопку редагування">' +
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></div>');
+        toggleEditorBtn.on('hover:enter', function() {
+            Lampa.Storage.set(STORAGE_KEYS.editor_enabled, false);
+            closeModalSafe();
+            if (currentContainer) {
+                currentContainer.find('.button--edit-order').remove();
+            }
+        });
+        toolbar.append(upBtn).append(downBtn).append(resetBtn).append(colorBtn).append(createFolderBtn).append(toggleEditorBtn);
         wrap.prepend(toolbar);
 
         openModalWithEdgeScroll({
@@ -2078,74 +2087,8 @@
         focusModalController();
     }
 
-    function addSettingsComponent() {
-        var settingsApi = Lampa.SettingsApi || Lampa.Settings;
-        if (!settingsApi || typeof settingsApi.addComponent !== 'function') {
-            setTimeout(addSettingsComponent, 500);
-            return;
-        }
-        var manifest = {};
-        try {
-            manifest = Lampa.Manifest && Lampa.Manifest.plugins && Lampa.Manifest.plugins.buttons ? Lampa.Manifest.plugins.buttons : {};
-        } catch (e) { logDebug('addSettingsComponent manifest', e); }
-
-        var componentName = 'buttons_plugin';
-        var componentTitle = 'Кнопки';
-
-        settingsApi.addComponent({
-            component: componentName,
-            name: componentTitle,
-            icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="10" rx="2"/><circle cx="7" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="17" cy="12" r="1"/></svg>'
-        });
-
-        settingsApi.addParam({
-            component: componentName,
-            param: {
-                name: 'editor_enabled',
-                type: 'trigger',
-                default: true
-            },
-            field: {
-                name: 'Редактор кнопок',
-                description: 'Показувати кнопку редагування порядку біля кнопок балансерів'
-            },
-            onChange: function(value) {
-                Lampa.Storage.set(STORAGE_KEYS.editor_enabled, value);
-                if (currentContainer && currentContainer.length) {
-                    var target = currentContainer.find('.full-start-new__buttons');
-                    if (value === false) {
-                        target.find('.button--edit-order').remove();
-                    } else {
-                        applyChanges();
-                    }
-                }
-            }
-        });
-
-        settingsApi.addParam({
-            component: componentName,
-            param: {
-                name: 'reset_button_order',
-                type: 'button',
-                default: ''
-            },
-            field: {
-                name: 'Скинути порядок кнопок',
-                description: 'Очистити збережений порядок кнопок'
-            },
-            onChange: function() {
-                setCustomOrder([]);
-                setItemOrder([]);
-                Lampa.Storage.set(STORAGE_KEYS.stable_map, {});
-                if (currentContainer && currentContainer.length) applyChanges();
-                Lampa.Noty.show('Порядок кнопок скинуто');
-            }
-        });
-    }
-
     function init() {
         Lampa.Storage.set(STORAGE_KEYS.plugin_version, PLUGIN_VERSION);
-        addSettingsComponent();
 
         Lampa.Listener.follow(FULL_EVENT_TYPE, function(e) {
             if (e.type === FULL_EVENT_TYPE && e.component === 'full') {
@@ -2160,16 +2103,7 @@
     }
 
     if (window.Lampa && Lampa.Listener) {
-        if (Lampa.Manifest && Lampa.Manifest.app_digital >= 100) {
-            init();
-        } else {
-            Lampa.Listener.follow('app', function(e) {
-                if (e.type === 'ready') init();
-            });
-            setTimeout(function() {
-                if (!Lampa.Storage.get(STORAGE_KEYS.plugin_version)) init();
-            }, 1000);
-        }
+        init();
     } else {
         document.addEventListener('DOMContentLoaded', function() {
             if (window.Lampa && Lampa.Listener) init();
