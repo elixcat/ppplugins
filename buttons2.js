@@ -1,7 +1,7 @@
 (function() {
     'use strict';
 
-    var PLUGIN_VERSION = '1.87';
+    var PLUGIN_VERSION = '1.88';
     var EDIT_ORDER_BUTTON_ID = 'buttons_plugin_edit_order';
     var FULL_EVENT_TYPE = 'complite';
     var DELAY_AFTER_APPLY_MS = 100;
@@ -136,12 +136,12 @@
     var EXCLUDED_CLASSES = ['button--play', 'button--edit-order', 'button--folder'];
     var DEFAULT_GROUPS = [
         { name: 'online', patterns: ['online', 'lampac', 'modss', 'showy'], label: 'Онлайн' },
-        { name: 'torrent', patterns: ['torrent'], label: 'Торренты' },
-        { name: 'trailer', patterns: ['trailer', 'rutube'], label: 'Трейлеры' },
-        { name: 'favorite', patterns: ['favorite'], label: 'Избранное' },
-        { name: 'subscribe', patterns: ['subscribe'], label: 'Подписка' },
+        { name: 'torrent', patterns: ['torrent'], label: 'Торренти' },
+        { name: 'trailer', patterns: ['trailer', 'rutube'], label: 'Трейлери' },
+        { name: 'favorite', patterns: ['favorite'], label: 'Обране' },
+        { name: 'subscribe', patterns: ['subscribe'], label: 'Підписка' },
         { name: 'book', patterns: ['book'], label: 'Закладки' },
-        { name: 'reaction', patterns: ['reaction'], label: 'Реакции' }
+        { name: 'reaction', patterns: ['reaction'], label: 'Реакції' }
     ];
     var currentButtons = [];
     var allButtonsCache = [];
@@ -498,7 +498,7 @@
         var isUnset = !currentHex;
         var defaultRow = $('<div class="selector color-picker-default buttons-plugin-modal-row" tabindex="0">' +
             '<div class="color-picker-default-swatch"></div>' +
-            '<span class="buttons-plugin-ui-text">Стандартный</span></div>');
+            '<span class="buttons-plugin-ui-text">Стандартний</span></div>');
         if (isUnset) {
             defaultRow.addClass('color-picker-default--ring');
         }
@@ -508,7 +508,7 @@
         wrap.append(defaultRow);
 
         var hexRow = $('<div class="selector color-picker-hex buttons-plugin-modal-row buttons-plugin-modal-row--between" tabindex="0">' +
-            '<span class="buttons-plugin-ui-text">Код цвета (HEX)</span>' +
+            '<span class="buttons-plugin-ui-text">Код кольору (HEX)</span>' +
             '<span class="hex-value buttons-plugin-ui-text">' + escapeHtml(currentHex || '#') + '</span></div>');
         hexRow.on('hover:enter', function() {
             closeModalSafe();
@@ -516,7 +516,7 @@
                 if (typeof Lampa.Input !== 'undefined' && typeof Lampa.Input.edit === 'function') {
                     Lampa.Input.edit({
                         free: true,
-                        title: 'Код цвета (HEX)',
+                        title: 'Код кольору (HEX)',
                         nosave: true,
                         value: currentHex,
                         nomic: true
@@ -573,7 +573,7 @@
         closeModalSafe();
         setTimeout(function() {
             openModalWithEdgeScroll({
-                title: 'Цвет иконок',
+                title: 'Колір іконок',
                 html: wrap,
                 size: 'medium',
                 scroll_to_center: false,
@@ -914,7 +914,7 @@
 
     function loadIconsFromUrl(url, seen, originalCallback) {
         if (!url || typeof url !== 'string') {
-            originalCallback(null, 'Введите ссылку на файл');
+            originalCallback(null, 'Введіть посилання на файл');
             return;
         }
 
@@ -927,21 +927,21 @@
         var xhr = new XMLHttpRequest();
         xhr.timeout = 15000;
         xhr.ontimeout = function() {
-            callback(null, 'Таймаут загрузки');
+            callback(null, 'Тайм-аут завантаження');
         };
         xhr.onreadystatechange = function() {
             if (xhr.readyState !== 4) return;
             if (xhr.status !== 200) {
-                callback(null, 'Ошибка загрузки: ' + (xhr.status || 'сеть'));
+                callback(null, 'Помилка завантаження: ' + (xhr.status || 'мережа'));
                 return;
             }
             var text = (xhr.responseText || '').replace(/^\uFEFF/, '').trim();
             if (!text) {
-                callback(null, 'Пустой ответ');
+                callback(null, 'Порожня відповідь');
                 return;
             }
             if (text.indexOf('<!') === 0 || text.indexOf('<html') !== -1) {
-                callback(null, 'По ссылке отдаётся не JSON (проверьте файл на сайте)');
+                callback(null, 'За посиланням віддається не JSON (перевірте файл на сайті)');
                 return;
             }
             text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
@@ -958,13 +958,13 @@
                     if (svgList && svgList.length > 0) {
                         arr = svgList;
                     } else {
-                        callback(null, 'Неверный формат файла');
+                        callback(null, 'Невірний формат файлу');
                         return;
                     }
                 }
             }
             if (!Array.isArray(arr)) {
-                callback(null, 'Файл должен содержать массив');
+                callback(null, 'Файл має містити масив');
                 return;
             }
             var result = [];
@@ -1044,14 +1044,14 @@
             });
         };
         xhr.onerror = function() {
-            callback(null, 'Ошибка сети');
+            callback(null, 'Помилка мережі');
         };
         try {
             xhr.open('GET', url, true);
             xhr.responseType = 'text';
             xhr.send();
         } catch (e) {
-            callback(null, 'Ошибка запроса');
+            callback(null, 'Помилка запиту');
         }
     }
 
@@ -1064,7 +1064,7 @@
         var wrap = $('<div class="icon-picker-wrap buttons-plugin-icon-picker"></div>');
         var defaultBlock = $('<div class="selector icon-picker-default" tabindex="0">' +
             '<div class="icon-picker-default__preview"></div>' +
-            '<span class="buttons-plugin-ui-text">По умолчанию</span></div>');
+            '<span class="buttons-plugin-ui-text">За замовчуванням</span></div>');
         if (defaultIconHtml) {
             defaultBlock.find('.icon-picker-default__preview').append($(defaultIconHtml).clone());
         }
@@ -1075,8 +1075,8 @@
             applyChoice(true, null);
         });
         wrap.append(defaultBlock);
-        var tabLampa = $('<div class="selector icon-picker-tab icon-picker-tab--active buttons-plugin-ui-text" tabindex="0">Иконки Lampa</div>');
-        var tabAlt = $('<div class="selector icon-picker-tab buttons-plugin-ui-text" tabindex="0">Альтернативные иконки</div>');
+        var tabLampa = $('<div class="selector icon-picker-tab icon-picker-tab--active buttons-plugin-ui-text" tabindex="0">Іконки Lampa</div>');
+        var tabAlt = $('<div class="selector icon-picker-tab buttons-plugin-ui-text" tabindex="0">Альтернативні іконки</div>');
         var switchBlock = $('<div class="icon-picker-switch-wrap"></div>');
         switchBlock.append(tabLampa).append(tabAlt);
         wrap.append(switchBlock);
@@ -1093,7 +1093,7 @@
             tabAlt.addClass('icon-picker-tab--active');
             tabLampa.removeClass('icon-picker-tab--active');
         });
-        loadStatus.text('Загрузка…');
+        loadStatus.text('Завантаження…');
         var modalOpened = false;
         function openModal() {
             if (modalOpened) return;
@@ -1135,7 +1135,7 @@
                     });
                     wrap.append(altCell);
                 });
-                loadStatus.text('Альтернативные: ' + newEntries.length + ' · вкладка Lampa: ' + icons.length);
+                loadStatus.text('Альтернативні: ' + newEntries.length + ' · вкладка Lampa: ' + icons.length);
             } else {
                 loadStatus.text('Вкладка Lampa: ' + icons.length);
             }
@@ -1176,7 +1176,7 @@
 
     function openIconPicker(btn, btnId, defaultIconHtml, listItem) {
         buildIconPicker({
-            title: 'Иконка кнопки',
+            title: 'Іконка кнопки',
             defaultIconHtml: defaultIconHtml,
             onChoice: function(isDefault, chosenHtml) {
                 var stored = getCustomIcons();
@@ -1198,24 +1198,57 @@
     var BM_ID_ATTR = 'data-bm-id';
     var BM_ID_SEP = '___dup';
 
+    function normalizeButtonText(raw) {
+        if (!raw) return '';
+        var t = String(raw).trim();
+        // прибираємо волатильні суфікси, які часто змінюються після оновлення балансера
+        t = t.replace(/\s*[\(\[].*?[\)\]]\s*$/g, '');          // (HD), [4K], (v2) тощо
+        t = t.replace(/\s*v?\d+(\.\d+)*\s*$/i, '');             // v1.2, 3.0
+        t = t.replace(/\s+/g, ' ').trim();
+        return t;
+    }
+
     function baseButtonId(button) {
+        if (!button || !button.length) return 'button_unknown';
+
+        // 1. Найстабільніші атрибути, які ставлять багато балансерів
+        var dataKey = button.attr('data-name') || button.attr('data-source') ||
+                      button.attr('data-component') || button.attr('data-id') ||
+                      button.attr('data-plugin') || button.attr('data-balancer') || '';
+        if (dataKey) {
+            return 'data_' + String(dataKey).toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_\-]/gi, '');
+        }
+
         var classes = button.attr('class') || '';
         var span = button.find('span').first();
-        var text = (span.attr('data-original-text') || span.text() || '').trim().replace(/\s+/g, '_');
+        var rawText = (span.attr('data-original-text') || span.text() || '').trim();
+        var text = normalizeButtonText(rawText).replace(/\s+/g, '_');
         var subtitle = button.attr('data-subtitle') || '';
-        if (classes.indexOf('modss') !== -1 || text.indexOf('MODS') !== -1 || text.indexOf('MOD') !== -1) {
+
+        // спеціальні випадки
+        if (classes.indexOf('modss') !== -1 || /MODS?/i.test(rawText)) {
             return 'modss_online_button';
         }
-        if (classes.indexOf('showy') !== -1 || text.indexOf('Showy') !== -1) {
+        if (classes.indexOf('showy') !== -1 || /Showy/i.test(rawText)) {
             return 'showy_online_button';
         }
-        var viewClasses = classes.split(' ').filter(function(c) { return c.indexOf('view--') === 0 || c.indexOf('button--') === 0; }).join('_');
+
+        // 2. Основні класи кнопки (без випадкових view-- / hash)
+        var viewClasses = classes.split(' ').filter(function(c) {
+            return (c.indexOf('view--') === 0 || c.indexOf('button--') === 0) &&
+                   c.indexOf('button--play') === -1 &&
+                   c.indexOf('button--edit') === -1 &&
+                   c.indexOf('button--folder') === -1;
+        }).join('_');
+
         if (!viewClasses && !text) {
             return 'button_unknown';
         }
-        var id = viewClasses + '_' + text;
+
+        // 3. ID = клас + нормалізований текст (текст важливіший для балансерів)
+        var id = (viewClasses ? viewClasses + '_' : '') + (text || 'unnamed');
         if (subtitle) {
-            id = id + '_' + subtitle.replace(/\s+/g, '_').substring(0, 30);
+            id = id + '_' + normalizeButtonText(subtitle).replace(/\s+/g, '_').substring(0, 30);
         }
         return id;
     }
@@ -1321,8 +1354,120 @@
         );
     }
 
+    function textSimilarity(a, b) {
+        if (!a || !b) return 0;
+        a = normalizeButtonText(a).toLowerCase();
+        b = normalizeButtonText(b).toLowerCase();
+        if (!a || !b) return 0;
+        if (a === b) return 100;
+        if (a.indexOf(b) !== -1 || b.indexOf(a) !== -1) return 80;
+        // простий коефіцієнт спільних слів
+        var wa = a.split(/[\s_\-]+/).filter(Boolean);
+        var wb = b.split(/[\s_\-]+/).filter(Boolean);
+        if (!wa.length || !wb.length) return 0;
+        var common = 0;
+        for (var i = 0; i < wa.length; i++) {
+            if (wb.indexOf(wa[i]) !== -1) common++;
+        }
+        return Math.round((common / Math.max(wa.length, wb.length)) * 60);
+    }
+
+    function getButtonRawText(btn) {
+        if (!btn || !btn.length) return '';
+        var span = btn.find('span').first();
+        return (span.attr('data-original-text') || span.text() || '').trim();
+    }
+
+    /**
+     * Жорстка прив'язка: якщо балансер оновився і змінив текст/клас,
+     * стара ID зникає, з'являється нова. Ми знаходимо найкращий матч
+     * серед зниклих ID і переписуємо custom_order, щоб позиція збереглася.
+     */
+    function remapCustomOrder(buttons) {
+        var customOrder = getCustomOrder().slice();
+        if (!customOrder.length) return customOrder;
+
+        var liveIds = {};
+        var liveById = {};
+        buttons.forEach(function(btn) {
+            var id = getButtonId(btn);
+            liveIds[id] = true;
+            liveById[id] = btn;
+        });
+
+        var missing = [];
+        customOrder.forEach(function(id) {
+            if (!liveIds[id]) missing.push(id);
+        });
+        if (!missing.length) return customOrder;
+
+        var newButtons = buttons.filter(function(btn) {
+            return customOrder.indexOf(getButtonId(btn)) === -1;
+        });
+        if (!newButtons.length) return customOrder;
+
+        var changed = false;
+        var usedNew = {};
+
+        missing.forEach(function(oldId) {
+            var bestScore = 0;
+            var bestBtn = null;
+            var bestNewId = null;
+
+            // намагаємося знайти старий текст з оригінального клону
+            var oldText = '';
+            var oldType = 'other';
+            var orig = allButtonsOriginal.find(function(b) { return getButtonId(b) === oldId; });
+            if (orig && orig.length) {
+                oldText = getButtonRawText(orig);
+                oldType = getButtonType(orig);
+            } else {
+                // fallback — беремо частину ID після останнього _
+                var parts = oldId.split('_');
+                oldText = parts.slice(-2).join(' ');
+            }
+
+            newButtons.forEach(function(btn) {
+                var newId = getButtonId(btn);
+                if (usedNew[newId]) return;
+                var score = textSimilarity(oldText, getButtonRawText(btn));
+                // бонус за той самий тип (online/torrent...)
+                if (getButtonType(btn) === oldType) score += 15;
+                // бонус якщо ID схожі
+                if (newId.indexOf(oldId.split('_').pop()) !== -1) score += 10;
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestBtn = btn;
+                    bestNewId = newId;
+                }
+            });
+
+            // поріг, щоб не матчити зовсім чужі кнопки
+            if (bestScore >= 45 && bestNewId) {
+                for (var i = 0; i < customOrder.length; i++) {
+                    if (customOrder[i] === oldId) {
+                        customOrder[i] = bestNewId;
+                        usedNew[bestNewId] = true;
+                        changed = true;
+                        logDebug('remap button position:', oldId, '→', bestNewId, '(score=' + bestScore + ')');
+                        break;
+                    }
+                }
+            }
+        });
+
+        if (changed) {
+            setCustomOrder(customOrder);
+            // Порядок оновлено під нові ID балансерів.
+            // Hidden / labels / icons залишаються під старими ключами —
+            // при ручному редагуванні користувач їх оновить.
+            // Головне: кнопка більше не стрибає в кінець списку.
+        }
+        return customOrder;
+    }
+
     function sortByCustomOrder(buttons) {
-        var customOrder = getCustomOrder();
+        var customOrder = remapCustomOrder(buttons);
         var priority = [];
         var regular = [];
         buttons.forEach(function(btn) {
@@ -1640,7 +1785,7 @@
                 items.push(item);
             }
         });
-        items.push({ title: 'Изменить порядок', edit: true });
+        items.push({ title: 'Змінити порядок', edit: true });
         Lampa.Select.show({
             title: folder.name,
             items: items,
@@ -1691,7 +1836,7 @@
             }
         });
         openModalWithEdgeScroll({
-            title: 'Порядок кнопок в папке',
+            title: 'Порядок кнопок у папці',
             html: list,
             size: 'medium',
             scroll_to_center: false,
@@ -1782,7 +1927,7 @@
         if (typeof Lampa.Input !== 'undefined' && typeof Lampa.Input.edit === 'function') {
             Lampa.Input.edit({
                 free: true,
-                title: 'Название папки',
+                title: 'Назва папки',
                 nosave: true,
                 value: currentName,
                 nomic: true
@@ -1791,8 +1936,8 @@
             });
         } else {
             openTextInputModal({
-                title: 'Название папки',
-                placeholder: 'Название папки',
+                title: 'Назва папки',
+                placeholder: 'Назва папки',
                 value: currentName,
                 onDone: function(val) {
                     applyName(val);
@@ -1807,7 +1952,7 @@
 
     function openFolderIconPicker(folder, listItem) {
         buildIconPicker({
-            title: 'Иконка папки',
+            title: 'Іконка папки',
             defaultIconHtml: getDefaultIconForFolder(folder),
             onChoice: function(isDefault, chosenHtml) {
                 updateFolder(folder.id, { customIcon: isDefault ? undefined : chosenHtml });
@@ -1834,13 +1979,13 @@
         if (typeof Lampa.Input !== 'undefined' && typeof Lampa.Input.edit === 'function') {
             Lampa.Input.edit({
                 free: true,
-                title: 'Название папки',
+                title: 'Назва папки',
                 nosave: true,
                 value: '',
                 nomic: true
             }, function(folderName) {
                 if (!folderName || !String(folderName).trim()) {
-                    Lampa.Noty.show('Введите название папки');
+                    Lampa.Noty.show('Введіть назву папки');
                     openEditDialog();
                     return;
                 }
@@ -1848,12 +1993,12 @@
             });
         } else {
             openTextInputModal({
-                title: 'Название папки',
-                placeholder: 'Название папки',
+                title: 'Назва папки',
+                placeholder: 'Назва папки',
                 value: '',
                 onDone: function(val) {
                     if (!val) {
-                        Lampa.Noty.show('Введите название папки');
+                        Lampa.Noty.show('Введіть назву папки');
                         openEditDialog();
                         return;
                     }
@@ -1903,12 +2048,12 @@
             '<span class="menu-edit-list__create-folder-spacer"></span>' +
             '<div class="menu-edit-list__create-folder-inner">' +
             '<div class="menu-edit-list__icon">' + toolbarSvgFolderConfirm() + '</div>' +
-            '<div class="buttons-plugin-ui-text menu-edit-list__toolbar-label">Создать папку "' + escapeHtml(folderName) + '"</div>' +
+            '<div class="buttons-plugin-ui-text menu-edit-list__toolbar-label">Створити папку "' + escapeHtml(folderName) + '"</div>' +
             '</div>' +
             '<span class="menu-edit-list__create-folder-spacer"></span></div>');
         createBtn.on('hover:enter', function() {
             if (selectedButtons.length < 2) {
-                Lampa.Noty.show('Выберите минимум 2 кнопки');
+                Lampa.Noty.show('Виберіть мінімум 2 кнопки');
                 return;
             }
             var folder = createFolder(folderName, selectedButtons);
@@ -1945,7 +2090,7 @@
             }
             setItemOrder(itemOrder);
             Lampa.Modal.close();
-            Lampa.Noty.show('Папка создана "' + folderName + '"');
+            Lampa.Noty.show('Папку створено "' + folderName + '"');
             if (currentContainer) {
                 currentContainer.data('buttons-processed', false);
                 reorderButtons(currentContainer);
@@ -1954,7 +2099,7 @@
         });
         list.append(createBtn);
         openModalWithEdgeScroll({
-            title: 'Выберите кнопки для папки',
+            title: 'Виберіть кнопки для папки',
             html: list,
             size: 'medium',
             scroll_to_center: true,
@@ -2017,7 +2162,7 @@
             '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>' +
             '<line x1="12" y1="11" x2="12" y2="17"></line><line x1="9" y1="14" x2="15" y2="14"></line>' +
             '</svg></div>' +
-            '<div class="menu-edit-list__title buttons-plugin-ui-text">Создать папку</div></div>' +
+            '<div class="menu-edit-list__title buttons-plugin-ui-text">Створити папку</div></div>' +
             '<span class="menu-edit-list__create-folder-spacer"></span></div>');
         createFolderBtn.on('hover:enter', function() {
             Lampa.Modal.close();
@@ -2027,7 +2172,7 @@
             '<span class="menu-edit-list__create-folder-spacer"></span>' +
             '<div class="menu-edit-list__create-folder-inner">' +
             '<div class="menu-edit-list__icon">' + toolbarSvgIconColorGlobal() + '</div>' +
-            '<div class="menu-edit-list__title buttons-plugin-ui-text">Цвет иконок (для всех)</div>' +
+            '<div class="menu-edit-list__title buttons-plugin-ui-text">Колір іконок (для всіх)</div>' +
             '</div>' +
             '<span class="menu-edit-list__create-folder-spacer"></span></div>');
         globalIconColorBtn.on('hover:enter', function() {
@@ -2039,13 +2184,13 @@
             }, 200);
         });
         var modes = ['default', 'icons', 'always'];
-        var labels = {default: 'Стандартный', icons: 'Только иконки', always: 'С текстом'};
+        var labels = {default: 'Стандартний', icons: 'Лише іконки', always: 'З текстом'};
         var currentMode = Lampa.Storage.get(STORAGE_KEYS.viewmode, 'default');
         var modeBtn = $('<div class="selector viewmode-switch menu-edit-list__toolbar-block">' +
             '<span class="menu-edit-list__create-folder-spacer"></span>' +
             '<div class="menu-edit-list__create-folder-inner">' +
             '<div class="menu-edit-list__icon menu-edit-list__icon--viewmode">' + getViewModeToolbarSvg(currentMode) + '</div>' +
-            '<div class="menu-edit-list__title menu-edit-list__toolbar-label buttons-plugin-ui-text">Вид кнопок: ' + labels[currentMode] + '</div>' +
+            '<div class="menu-edit-list__title menu-edit-list__toolbar-label buttons-plugin-ui-text">Вигляд кнопок: ' + labels[currentMode] + '</div>' +
             '</div>' +
             '<span class="menu-edit-list__create-folder-spacer"></span></div>');
         modeBtn.on('hover:enter', function() {
@@ -2054,7 +2199,7 @@
             currentMode = modes[idx];
             Lampa.Storage.set(STORAGE_KEYS.viewmode, currentMode);
             var $row = $(this);
-            $row.find('.menu-edit-list__toolbar-label').text('Вид кнопок: ' + labels[currentMode]);
+            $row.find('.menu-edit-list__toolbar-label').text('Вигляд кнопок: ' + labels[currentMode]);
             $row.find('.menu-edit-list__icon--viewmode').html(getViewModeToolbarSvg(currentMode));
             if (currentContainer) {
                 var target = currentContainer.find('.full-start-new__buttons');
@@ -2078,11 +2223,11 @@
             var item = $('<div class="menu-edit-list__item folder-item">' +
                 '<div class="menu-edit-list__icon"></div>' +
                 '<div class="menu-edit-list__title">' + escapeHtml(folder.name) + ' <span style="opacity:0.5">(' + folder.buttons.length + ')</span></div>' +
-                '<div class="menu-edit-list__change-name selector" title="Сменить название">' +
+                '<div class="menu-edit-list__change-name selector" title="Змінити назву">' +
                 '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" width="18" height="18"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" stroke="currentColor" stroke-width="1.5"/></svg></div>' +
-                '<div class="menu-edit-list__change-icon selector" title="Сменить иконку">' +
+                '<div class="menu-edit-list__change-icon selector" title="Змінити іконку">' +
                 '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>' +
-                '<div class="menu-edit-list__change-color selector" title="Цвет иконки">' + iconSvgPalette() + '</div>' +
+                '<div class="menu-edit-list__change-color selector" title="Колір іконки">' + iconSvgPalette() + '</div>' +
                 '<div class="menu-edit-list__move move-up selector"><svg width="22" height="14" viewBox="0 0 22 14" fill="none"><path d="M2 12L11 3L20 12" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg></div>' +
                 '<div class="menu-edit-list__move move-down selector"><svg width="22" height="14" viewBox="0 0 22 14" fill="none"><path d="M2 2L11 11L20 2" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg></div>' +
                 '<div class="menu-edit-list__delete selector">' +
@@ -2143,7 +2288,7 @@
                 }
                 setItemOrder(newItemOrder);
                 item.remove();
-                Lampa.Noty.show('Папка удалена');
+                Lampa.Noty.show('Папку видалено');
                 if (typeof Lampa.Modal !== 'undefined' && Lampa.Modal.close) {
                     Lampa.Modal.close();
                 }
@@ -2191,7 +2336,7 @@
             if (typeof Lampa.Input !== 'undefined' && typeof Lampa.Input.edit === 'function') {
                 Lampa.Input.edit({
                     free: true,
-                    title: 'Название кнопки',
+                    title: 'Назва кнопки',
                     nosave: true,
                     value: currentLabel,
                     nomic: true
@@ -2200,8 +2345,8 @@
                 });
             } else {
                 openTextInputModal({
-                    title: 'Название кнопки',
-                    placeholder: 'Название кнопки',
+                    title: 'Назва кнопки',
+                    placeholder: 'Назва кнопки',
                     value: currentLabel,
                     onDone: function(val) {
                         applyName(val);
@@ -2222,12 +2367,12 @@
             var item = $('<div class="menu-edit-list__item">' +
                 '<div class="menu-edit-list__icon"></div>' +
                 '<div class="menu-edit-list__title"></div>' +
-                '<div class="menu-edit-list__change-name selector" title="Сменить название">' +
+                '<div class="menu-edit-list__change-name selector" title="Змінити назву">' +
                 '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" width="18" height="18"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" stroke="currentColor" stroke-width="1.5"/></svg></div>' +
-                '<div class="menu-edit-list__change-icon selector menu-edit-list__icon-cell" title="Сменить иконку">' +
+                '<div class="menu-edit-list__change-icon selector menu-edit-list__icon-cell" title="Змінити іконку">' +
                 '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>' +
                 '</div>' +
-                '<div class="menu-edit-list__change-color selector" title="Цвет иконки">' + iconSvgPalette() + '</div>' +
+                '<div class="menu-edit-list__change-color selector" title="Колір іконки">' + iconSvgPalette() + '</div>' +
                 '<div class="menu-edit-list__move move-up selector">' +
                 '<svg width="22" height="14" viewBox="0 0 22 14" fill="none" xmlns="http://www.w3.org/2000/svg">' +
                 '<path d="M2 12L11 3L20 12" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>' +
@@ -2354,7 +2499,7 @@
             '<span class="menu-edit-list__create-folder-spacer"></span>' +
             '<div class="menu-edit-list__create-folder-inner">' +
             '<div class="menu-edit-list__icon">' + toolbarSvgReset() + '</div>' +
-            '<div class="buttons-plugin-ui-text menu-edit-list__toolbar-label">Сбросить по умолчанию</div>' +
+            '<div class="buttons-plugin-ui-text menu-edit-list__toolbar-label">Скинути за замовчуванням</div>' +
             '</div>' +
             '<span class="menu-edit-list__create-folder-spacer"></span></div>');
         resetBtn.on('hover:enter', function() {
