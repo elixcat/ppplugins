@@ -1,7 +1,7 @@
 (function() {
     'use strict';
 
-    var PLUGIN_VERSION = '1.88';
+    var PLUGIN_VERSION = '1.87';
     var EDIT_ORDER_BUTTON_ID = 'buttons_plugin_edit_order';
     var FULL_EVENT_TYPE = 'complite';
     var DELAY_AFTER_APPLY_MS = 100;
@@ -20,8 +20,7 @@
         folders: 'button_folders',
         item_order: 'button_item_order',
         icon_global_color: 'button_global_color',
-        icon_colors: 'button_custom_colors',
-        stable_map: 'button_stable_map'
+        icon_colors: 'button_custom_colors'
     };
 
     var colorPickerPaletteHexes = ['#ef5350', '#f44336', '#e53935', '#c62828', '#ff9800', '#fb8c00', '#f57c00', '#e65100', '#ffeb3b', '#fdd835', '#fbc02d', '#f57f17', '#66bb6a', '#4caf50', '#43a047', '#2e7d32', '#3da18d', '#26c6da', '#00bcd4', '#00acc1', '#00838f', '#42a5f5', '#2196f3', '#1e88e5', '#1565c0', '#8b5cf6', '#ab47bc', '#9c27b0', '#8e24aa', '#6a1b9a', '#ec407a', '#e91e63', '#d81b60', '#ad1457', '#ffffff', '#e0e0e0', '#000000'];
@@ -137,97 +136,17 @@
     var EXCLUDED_CLASSES = ['button--play', 'button--edit-order', 'button--folder'];
     var DEFAULT_GROUPS = [
         { name: 'online', patterns: ['online', 'lampac', 'modss', 'showy'], label: 'Онлайн' },
-        { name: 'torrent', patterns: ['torrent'], label: 'Торренти' },
-        { name: 'trailer', patterns: ['trailer', 'rutube'], label: 'Трейлери' },
-        { name: 'favorite', patterns: ['favorite'], label: 'Обране' },
-        { name: 'subscribe', patterns: ['subscribe'], label: 'Підписка' },
+        { name: 'torrent', patterns: ['torrent'], label: 'Торренты' },
+        { name: 'trailer', patterns: ['trailer', 'rutube'], label: 'Трейлеры' },
+        { name: 'favorite', patterns: ['favorite'], label: 'Избранное' },
+        { name: 'subscribe', patterns: ['subscribe'], label: 'Подписка' },
         { name: 'book', patterns: ['book'], label: 'Закладки' },
-        { name: 'reaction', patterns: ['reaction'], label: 'Реакції' }
+        { name: 'reaction', patterns: ['reaction'], label: 'Реакции' }
     ];
     var currentButtons = [];
     var allButtonsCache = [];
     var allButtonsOriginal = [];
     var currentContainer = null;
-
-    function getStableMap() {
-        var m = Lampa.Storage.get(STORAGE_KEYS.stable_map, {});
-        return m && typeof m === 'object' ? m : {};
-    }
-
-    function setStableMap(m) {
-        Lampa.Storage.set(STORAGE_KEYS.stable_map, m || {});
-    }
-
-    function baseIdOf(btnId) {
-        if (!btnId || typeof btnId !== 'string') return '';
-        var sepIdx = btnId.indexOf('___dup');
-        return sepIdx === -1 ? btnId : btnId.substring(0, sepIdx);
-    }
-
-    function detectBalancerPluginKey(btn) {
-        var classes = btn.attr('class') || '';
-        var text = (btn.find('span').first().text() || '').trim().toLowerCase();
-        var knownBalancers = [
-            { key: 'modss', patterns: ['modss', 'mods'] },
-            { key: 'showy', patterns: ['showy'] },
-            { key: 'lampac', patterns: ['lampac'] },
-            { key: 'btl', patterns: ['btl'] },
-            { key: 'torrentio', patterns: ['torrentio'] },
-            { key: 'jackett', patterns: ['jackett'] },
-            { key: 'prowlarr', patterns: ['prowlarr'] },
-            { key: 'btdig', patterns: ['btdig'] },
-            { key: 'rutor', patterns: ['rutor'] },
-            { key: 'nnmclub', patterns: ['nnmclub'] }
-        ];
-        for (var i = 0; i < knownBalancers.length; i++) {
-            var b = knownBalancers[i];
-            for (var j = 0; j < b.patterns.length; j++) {
-                if (classes.toLowerCase().indexOf(b.patterns[j]) !== -1 || text.indexOf(b.patterns[j]) !== -1) {
-                    return b.key;
-                }
-            }
-        }
-        if (classes.indexOf('online') !== -1) {
-            try {
-                var manifest = Lampa.Manifest && Lampa.Manifest.plugins;
-                if (manifest && Array.isArray(manifest)) {
-                    for (var k = 0; k < manifest.length; k++) {
-                        var p = manifest[k];
-                        if (p && p.name) {
-                            var pName = String(p.name).toLowerCase().replace(/\s+/g, '');
-                            if (classes.toLowerCase().indexOf(pName) !== -1 || text.indexOf(pName) !== -1) {
-                                return pName;
-                            }
-                        }
-                    }
-                }
-            } catch (e) { logDebug('detectBalancerPluginKey manifest', e); }
-        }
-        return null;
-    }
-
-    function getStableButtonKey(btn) {
-        var rawId = getButtonId(btn);
-        var base = baseIdOf(rawId);
-        var map = getStableMap();
-        if (map[base]) {
-            if (rawId !== base && !map[rawId]) {
-                map[rawId] = map[base];
-                setStableMap(map);
-            }
-            return map[base];
-        }
-        var pluginKey = detectBalancerPluginKey(btn);
-        var stableKey = pluginKey ? ('plugin:' + pluginKey) : ('btn:' + base);
-        map[base] = stableKey;
-        if (rawId !== base) map[rawId] = stableKey;
-        setStableMap(map);
-        return stableKey;
-    }
-
-    function getOrderKey(btn) {
-        return getStableButtonKey(btn);
-    }
 
     function isKnownButton(btn) {
         var btnId = getButtonId(btn);
@@ -338,6 +257,7 @@
     }
 
     function getFolders() {
+
         var raw = Lampa.Storage.get(STORAGE_KEYS.folders, []);
         if (!Array.isArray(raw)) return [];
         return raw.filter(function(f) { return f && typeof f === 'object'; }).map(function(f) {
@@ -351,6 +271,7 @@
     }
 
     function getItemOrder() {
+
         var raw = Lampa.Storage.get(STORAGE_KEYS.item_order, []);
         if (!Array.isArray(raw)) return [];
         return raw.filter(function(it) { return it && typeof it === 'object' && it.id != null; });
@@ -577,7 +498,7 @@
         var isUnset = !currentHex;
         var defaultRow = $('<div class="selector color-picker-default buttons-plugin-modal-row" tabindex="0">' +
             '<div class="color-picker-default-swatch"></div>' +
-            '<span class="buttons-plugin-ui-text">Стандартний</span></div>');
+            '<span class="buttons-plugin-ui-text">Стандартный</span></div>');
         if (isUnset) {
             defaultRow.addClass('color-picker-default--ring');
         }
@@ -587,7 +508,7 @@
         wrap.append(defaultRow);
 
         var hexRow = $('<div class="selector color-picker-hex buttons-plugin-modal-row buttons-plugin-modal-row--between" tabindex="0">' +
-            '<span class="buttons-plugin-ui-text">Код кольору (HEX)</span>' +
+            '<span class="buttons-plugin-ui-text">Код цвета (HEX)</span>' +
             '<span class="hex-value buttons-plugin-ui-text">' + escapeHtml(currentHex || '#') + '</span></div>');
         hexRow.on('hover:enter', function() {
             closeModalSafe();
@@ -595,7 +516,7 @@
                 if (typeof Lampa.Input !== 'undefined' && typeof Lampa.Input.edit === 'function') {
                     Lampa.Input.edit({
                         free: true,
-                        title: 'Код кольору (HEX)',
+                        title: 'Код цвета (HEX)',
                         nosave: true,
                         value: currentHex,
                         nomic: true
@@ -652,7 +573,7 @@
         closeModalSafe();
         setTimeout(function() {
             openModalWithEdgeScroll({
-                title: 'Колір іконок',
+                title: 'Цвет иконок',
                 html: wrap,
                 size: 'medium',
                 scroll_to_center: false,
@@ -844,6 +765,7 @@
         var folders = getFolders();
         var buttonsInFolders = [];
         folders.forEach(function(folder) {
+
             if (Array.isArray(folder.buttons)) {
                 buttonsInFolders = buttonsInFolders.concat(folder.buttons);
             }
@@ -992,7 +914,7 @@
 
     function loadIconsFromUrl(url, seen, originalCallback) {
         if (!url || typeof url !== 'string') {
-            originalCallback(null, 'Введіть посилання на файл');
+            originalCallback(null, 'Введите ссылку на файл');
             return;
         }
 
@@ -1005,21 +927,21 @@
         var xhr = new XMLHttpRequest();
         xhr.timeout = 15000;
         xhr.ontimeout = function() {
-            callback(null, 'Тайм-аут завантаження');
+            callback(null, 'Таймаут загрузки');
         };
         xhr.onreadystatechange = function() {
             if (xhr.readyState !== 4) return;
             if (xhr.status !== 200) {
-                callback(null, 'Помилка завантаження: ' + (xhr.status || 'мережа'));
+                callback(null, 'Ошибка загрузки: ' + (xhr.status || 'сеть'));
                 return;
             }
             var text = (xhr.responseText || '').replace(/^\uFEFF/, '').trim();
             if (!text) {
-                callback(null, 'Порожня відповідь');
+                callback(null, 'Пустой ответ');
                 return;
             }
             if (text.indexOf('<!') === 0 || text.indexOf('<html') !== -1) {
-                callback(null, 'За посиланням віддається не JSON (перевірте файл на сайті)');
+                callback(null, 'По ссылке отдаётся не JSON (проверьте файл на сайте)');
                 return;
             }
             text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
@@ -1036,13 +958,13 @@
                     if (svgList && svgList.length > 0) {
                         arr = svgList;
                     } else {
-                        callback(null, 'Невірний формат файлу');
+                        callback(null, 'Неверный формат файла');
                         return;
                     }
                 }
             }
             if (!Array.isArray(arr)) {
-                callback(null, 'Файл має містити масив');
+                callback(null, 'Файл должен содержать массив');
                 return;
             }
             var result = [];
@@ -1122,14 +1044,14 @@
             });
         };
         xhr.onerror = function() {
-            callback(null, 'Помилка мережі');
+            callback(null, 'Ошибка сети');
         };
         try {
             xhr.open('GET', url, true);
             xhr.responseType = 'text';
             xhr.send();
         } catch (e) {
-            callback(null, 'Помилка запиту');
+            callback(null, 'Ошибка запроса');
         }
     }
 
@@ -1142,7 +1064,7 @@
         var wrap = $('<div class="icon-picker-wrap buttons-plugin-icon-picker"></div>');
         var defaultBlock = $('<div class="selector icon-picker-default" tabindex="0">' +
             '<div class="icon-picker-default__preview"></div>' +
-            '<span class="buttons-plugin-ui-text">За замовчуванням</span></div>');
+            '<span class="buttons-plugin-ui-text">По умолчанию</span></div>');
         if (defaultIconHtml) {
             defaultBlock.find('.icon-picker-default__preview').append($(defaultIconHtml).clone());
         }
@@ -1153,8 +1075,8 @@
             applyChoice(true, null);
         });
         wrap.append(defaultBlock);
-        var tabLampa = $('<div class="selector icon-picker-tab icon-picker-tab--active buttons-plugin-ui-text" tabindex="0">Іконки Lampa</div>');
-        var tabAlt = $('<div class="selector icon-picker-tab buttons-plugin-ui-text" tabindex="0">Альтернативні іконки</div>');
+        var tabLampa = $('<div class="selector icon-picker-tab icon-picker-tab--active buttons-plugin-ui-text" tabindex="0">Иконки Lampa</div>');
+        var tabAlt = $('<div class="selector icon-picker-tab buttons-plugin-ui-text" tabindex="0">Альтернативные иконки</div>');
         var switchBlock = $('<div class="icon-picker-switch-wrap"></div>');
         switchBlock.append(tabLampa).append(tabAlt);
         wrap.append(switchBlock);
@@ -1171,7 +1093,7 @@
             tabAlt.addClass('icon-picker-tab--active');
             tabLampa.removeClass('icon-picker-tab--active');
         });
-        loadStatus.text('Завантаження…');
+        loadStatus.text('Загрузка…');
         var modalOpened = false;
         function openModal() {
             if (modalOpened) return;
@@ -1213,7 +1135,7 @@
                     });
                     wrap.append(altCell);
                 });
-                loadStatus.text('Альтернативні: ' + newEntries.length + ' · вкладка Lampa: ' + icons.length);
+                loadStatus.text('Альтернативные: ' + newEntries.length + ' · вкладка Lampa: ' + icons.length);
             } else {
                 loadStatus.text('Вкладка Lampa: ' + icons.length);
             }
@@ -1254,7 +1176,7 @@
 
     function openIconPicker(btn, btnId, defaultIconHtml, listItem) {
         buildIconPicker({
-            title: 'Іконка кнопки',
+            title: 'Иконка кнопки',
             defaultIconHtml: defaultIconHtml,
             onChoice: function(isDefault, chosenHtml) {
                 var stored = getCustomIcons();
@@ -1401,8 +1323,24 @@
 
     function sortByCustomOrder(buttons) {
         var customOrder = getCustomOrder();
+        var priority = [];
+        var regular = [];
+        buttons.forEach(function(btn) {
+            var id = getButtonId(btn);
+            if (id === 'modss_online_button') {
+                priority.push(btn);
+            } else {
+                regular.push(btn);
+            }
+        });
+        priority.sort(function(a, b) {
+            var idA = getButtonId(a);
+            var idB = getButtonId(b);
+            if (idA === 'modss_online_button') return -1;
+            if (idB === 'modss_online_button') return 1;
+            return 0;
+        });
         if (!customOrder.length) {
-            var regular = buttons.slice();
             regular.sort(function(a, b) {
                 var typeOrder = ['online', 'torrent', 'trailer', 'favorite', 'subscribe', 'book', 'reaction', 'other'];
                 var typeA = getButtonType(a);
@@ -1413,20 +1351,20 @@
                 if (indexB === -1) indexB = 999;
                 return indexA - indexB;
             });
-            return regular;
+            return priority.concat(regular);
         }
         var sorted = [];
-        var remaining = buttons.slice();
-        customOrder.forEach(function(key) {
+        var remaining = regular.slice();
+        customOrder.forEach(function(id) {
             for (var i = 0; i < remaining.length; i++) {
-                if (getOrderKey(remaining[i]) === key || getButtonId(remaining[i]) === key) {
+                if (getButtonId(remaining[i]) === id) {
                     sorted.push(remaining[i]);
                     remaining.splice(i, 1);
                     break;
                 }
             }
         });
-        return sorted.concat(remaining);
+        return priority.concat(sorted).concat(remaining);
     }
 
     function applyHiddenButtons(buttons) {
@@ -1496,20 +1434,9 @@
     function saveOrder() {
         var order = [];
         currentButtons.forEach(function(btn) {
-            order.push(getOrderKey(btn));
+            order.push(getButtonId(btn));
         });
         setCustomOrder(order);
-    }
-
-    function createFolderButton(folder) {
-        var btn = $('<div class="full-start__button selector button--folder" data-folder-id="' + escapeHtml(folder.id) + '"></div>');
-        btn.append($(folderPlaceholderSvgStr()));
-        var span = $('<span>' + escapeHtml(folder.name || 'Папка') + '</span>');
-        btn.append(span);
-        btn.on('hover:enter', function() {
-            openFolder(folder);
-        });
-        return btn;
     }
 
     function layoutButtons(targetContainer, currentButtons, folders, buttonsInFolders, options) {
@@ -1519,48 +1446,6 @@
         if (!buttonsInFolders) buttonsInFolders = [];
         var visibleButtons = [];
         var itemOrder = getItemOrder();
-        var customOrder = getCustomOrder();
-
-        if (customOrder.length > 0) {
-            var addedKeys = {};
-            customOrder.forEach(function(key) {
-                var btn = currentButtons.find(function(b) {
-                    return getOrderKey(b) === key || getButtonId(b) === key;
-                });
-                if (btn) {
-                    var bid = getButtonId(btn);
-                    if (!guardInFolders || buttonsInFolders.indexOf(bid) === -1) {
-                        targetContainer.append(btn);
-                        if (!btn.hasClass('hidden')) visibleButtons.push(btn);
-                        addedKeys[key] = true;
-                        addedKeys[bid] = true;
-                    }
-                }
-                var folder = folders.find(function(f) { return f.id === key; });
-                if (folder) {
-                    var folderBtn = createFolderButton(folder);
-                    targetContainer.append(folderBtn);
-                    visibleButtons.push(folderBtn);
-                    addedKeys[key] = true;
-                }
-            });
-            currentButtons.forEach(function(btn) {
-                var bid = getButtonId(btn);
-                var okey = getOrderKey(btn);
-                if (addedKeys[okey] || addedKeys[bid]) return;
-                if (guardInFolders && buttonsInFolders.indexOf(bid) !== -1) return;
-                targetContainer.append(btn);
-                if (!btn.hasClass('hidden')) visibleButtons.push(btn);
-            });
-            folders.forEach(function(folder) {
-                if (addedKeys[folder.id]) return;
-                var folderBtn = createFolderButton(folder);
-                targetContainer.append(folderBtn);
-                visibleButtons.push(folderBtn);
-            });
-            return visibleButtons;
-        }
-
         if (itemOrder.length > 0) {
             var addedFolders = [];
             var addedButtons = [];
@@ -1576,9 +1461,7 @@
                 } else if (item.type === 'button') {
                     var btnId = item.id;
                     if (!guardInFolders || buttonsInFolders.indexOf(btnId) === -1) {
-                        var btn = currentButtons.find(function(b) {
-                            return getButtonId(b) === btnId || getOrderKey(b) === btnId;
-                        });
+                        var btn = currentButtons.find(function(b) { return getButtonId(b) === btnId; });
                         if (btn) {
                             targetContainer.append(btn);
                             if (!btn.hasClass('hidden')) visibleButtons.push(btn);
@@ -1644,469 +1527,1279 @@
         targetContainer.find('.full-start__button').not('.button--edit-order').detach();
 
         var visibleButtons = layoutButtons(targetContainer, currentButtons, folders, buttonsInFolders, {
-            guardButtonsInFolders: true
+            guardButtonsInFolders: true,
+            foldersFirstWhenNoOrder: false
         });
-
+        applyButtonAnimation(visibleButtons, currentContainer.hasClass('applecation'));
+        var editBtn = targetContainer.find('.button--edit-order');
+        if (editBtn.length) {
+            editBtn.detach();
+            targetContainer.append(editBtn);
+        }
         applyHiddenButtons(currentButtons);
         applyCustomLabels(currentButtons);
-        applyIconsAndColorsToButtons(visibleButtons);
-        applyButtonAnimation(visibleButtons, false);
-
-        if (Lampa.Storage.get(STORAGE_KEYS.editor_enabled) !== false) {
-            var editBtn = targetContainer.find('.button--edit-order');
-            if (!editBtn.length) {
-                editBtn = createEditButton();
-                targetContainer.append(editBtn);
+        applyIconsAndColorsToButtons(targetContainer.find('.full-start__button'));
+        var viewmode = Lampa.Storage.get(STORAGE_KEYS.viewmode, 'default');
+        targetContainer.removeClass('icons-only always-text');
+        if (viewmode === 'icons') targetContainer.addClass('icons-only');
+        if (viewmode === 'always') targetContainer.addClass('always-text');
+        saveOrder();
+        setTimeout(function() {
+            if (currentContainer) {
+                setupButtonNavigation(currentContainer);
             }
-        }
-        currentContainer.data('buttons-animation-until', Date.now() + (visibleButtons.length * 80) + 400);
-        watchForLateButtons(currentContainer);
+        }, DELAY_AFTER_APPLY_MS);
     }
 
-    function reorderButtons(container, opts) {
-        if (!container) return false;
-        var saved = currentContainer;
-        currentContainer = container;
-        try {
-            applyChanges();
-        } finally {
-            currentContainer = saved;
-        }
-        return true;
+    function capitalize(str) {
+        if (!str) return str;
+        return str.charAt(0).toUpperCase() + str.slice(1);
     }
 
-    function refreshController() {
-        try {
-            if (Lampa.Controller && typeof Lampa.Controller.refresh === 'function') {
-                Lampa.Controller.refresh();
+    function getButtonDisplayName(btn, allButtons) {
+        var customLabels = getCustomLabels();
+        var btnId = getButtonId(btn);
+        if (customLabels[btnId]) {
+            return customLabels[btnId];
+        }
+        var text = btn.find('span').text().trim();
+        var classes = btn.attr('class') || '';
+        var subtitle = btn.attr('data-subtitle') || '';
+        if (!text) {
+            var viewClass = classes.split(' ').find(function(c) { return c.indexOf('view--') === 0 || c.indexOf('button--') === 0; });
+            if (viewClass) {
+                text = viewClass.replace('view--', '').replace('button--', '').replace(/_/g, ' ');
+                text = capitalize(text);
+            } else {
+                text = 'Кнопка';
             }
-        } catch (e) { logDebug('refreshController', e); }
+            return text;
+        }
+        var sameTextCount = 0;
+        allButtons.forEach(function(otherBtn) {
+            if (otherBtn.find('span').text().trim() === text) {
+                sameTextCount++;
+            }
+        });
+        if (sameTextCount > 1) {
+            if (subtitle) {
+                return text + ' (' + (subtitle.substring(0, 30).replace(/</g, '').replace(/>/g, '')) + ')';
+            }
+
+            var viewOnlyClass = classes.split(' ').find(function(c) { return c.indexOf('view--') === 0; });
+            if (viewOnlyClass) {
+                var identifier = viewOnlyClass.replace('view--', '').replace(/_/g, ' ');
+                identifier = capitalize(identifier);
+                return text + ' (' + identifier + ')';
+            }
+        }
+        return text;
     }
 
-    function openFolder(folder) {
-        var wrap = $('<div class="folder-view-wrap"></div>');
-        var list = $('<div class="folder-view-list"></div>');
-        wrap.append(list);
-
-        function renderFolderButtons() {
-            list.empty();
-            var allBtns = currentContainer ? currentContainer.find('.full-start__button').not('.button--edit-order, .button--folder') : $();
-            var items = [];
-            if (Array.isArray(folder.buttons)) {
-                folder.buttons.forEach(function(id) {
-                    allBtns.each(function() {
-                        var $b = $(this);
-                        if (getButtonId($b) === id) {
-                            items.push($b.clone());
-                        }
-                    });
-                });
+    function createFolderButton(folder) {
+        var icon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+            '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>' +
+            '</svg>';
+        if (folder.customIcon) {
+            icon = folder.customIcon;
+        } else {
+            var firstBtnId = folder.buttons[0];
+            var firstBtn = findButton(firstBtnId);
+            if (firstBtn && firstBtn.length) {
+                var btnIcon = firstBtn.find('svg').first();
+                if (btnIcon.length) {
+                    icon = btnIcon.prop('outerHTML');
+                }
             }
-            if (!items.length) {
-                list.append($('<div class="folder-view-empty buttons-plugin-ui-text">У папці немає кнопок</div>'));
-                return;
-            }
-            items.forEach(function($b) {
-                $b.addClass('selector');
-                $b.on('hover:enter', function() {
-                    closeModalSafe();
-                    var orig = findButton(getButtonId($b));
-                    if (orig && orig.length) orig.trigger('hover:enter');
-                });
-                list.append($b);
-            });
         }
+        var btn = $('<div class="full-start__button selector button--folder" data-folder-id="' + escapeHtml(folder.id) + '">' +
+            icon +
+            '<span>' + escapeHtml(folder.name) + '</span>' +
+            '</div>');
+        btn.on('hover:enter', function() {
+            openFolderMenu(folder);
+        });
+        return btn;
+    }
 
-        renderFolderButtons();
+    function openFolderMenu(folder) {
+        var items = [];
+        folder.buttons.forEach(function(btnId) {
+            var btn = findButton(btnId);
+            if (btn && btn.length) {
+                var displayName = getButtonDisplayName(btn, allButtonsOriginal);
+                var iconElement = btn.find('svg').first();
+                var icon = iconElement.length ? iconElement.prop('outerHTML') : '';
+                var item = { title: displayName.replace(/<[^>]*>/g, ''), button: btn, btnId: btnId };
+                if (icon) {
+                    item.template = 'selectbox_icon';
+                    item.icon = icon;
+                }
+                var subtitle = btn.attr('data-subtitle');
+                if (subtitle) item.subtitle = subtitle;
+                items.push(item);
+            }
+        });
+        items.push({ title: 'Изменить порядок', edit: true });
+        Lampa.Select.show({
+            title: folder.name,
+            items: items,
+            onSelect: function(item) {
+                if (item.edit) {
+                    openFolderEditDialog(folder);
+                } else {
+                    item.button.trigger('hover:enter');
+                }
+            },
+            onBack: function() {
+                Lampa.Controller.toggle('full_start');
+            }
+        });
+    }
 
-        var toolbar = $('<div class="folder-view-toolbar buttons-plugin-toolbar"></div>');
-        var renameBtn = $('<div class="folder-view-tool-btn selector" tabindex="0" title="Перейменувати папку">' +
-            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div>');
-        renameBtn.on('hover:enter', function() {
-            closeModalSafe();
-            setTimeout(function() {
-                openTextInputModal({
-                    title: 'Перейменувати папку',
-                    placeholder: 'Назва папки',
-                    value: folder.name || '',
-                    onDone: function(val) {
-                        if (val) {
-                            folder.name = val;
-                            var folders = getFolders();
-                            var idx = folders.findIndex(function(f) { return f.id === folder.id; });
-                            if (idx !== -1) {
-                                folders[idx].name = val;
-                                setFolders(folders);
-                            }
-                            applyChanges();
-                        }
-                        setTimeout(function() { openFolder(folder); }, 200);
-                    },
-                    onBack: function() {
-                        setTimeout(function() { openFolder(folder); }, 200);
+    function openFolderEditDialog(folder) {
+        var list = $('<div class="menu-edit-list buttons-plugin-order-modal"></div>');
+        folder.buttons.forEach(function(btnId) {
+            var btn = findButton(btnId);
+            if (btn && btn.length) {
+                var displayName = getButtonDisplayName(btn, allButtonsOriginal);
+                var iconElement = btn.find('svg').first();
+                var icon = iconElement.length ? iconElement.clone() : $('<svg></svg>');
+                var item = $('<div class="menu-edit-list__item">' +
+                    '<div class="menu-edit-list__icon"></div>' +
+                    '<div class="menu-edit-list__title">' + escapeHtml(displayName) + '</div>' +
+                    '<div class="menu-edit-list__move move-up selector"><svg width="22" height="14" viewBox="0 0 22 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 12L11 3L20 12" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg></div>' +
+                    '<div class="menu-edit-list__move move-down selector"><svg width="22" height="14" viewBox="0 0 22 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 2L11 11L20 2" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg></div>' +
+                    '</div>');
+                item.find('.menu-edit-list__icon').append(icon);
+                item.data('btnId', btnId);
+                item.find('.move-up').on('hover:enter', function() {
+                    var prev = item.prev();
+                    if (prev.length) {
+                        item.insertBefore(prev);
+                        saveFolderButtonOrder(folder, list);
                     }
                 });
-            }, 200);
+                item.find('.move-down').on('hover:enter', function() {
+                    var next = item.next();
+                    if (next.length) {
+                        item.insertAfter(next);
+                        saveFolderButtonOrder(folder, list);
+                    }
+                });
+                list.append(item);
+            }
         });
-        var deleteBtn = $('<div class="folder-view-tool-btn selector" tabindex="0" title="Видалити папку">' +
-            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></div>');
-        deleteBtn.on('hover:enter', function() {
-            var folders = getFolders();
-            var newFolders = folders.filter(function(f) { return f.id !== folder.id; });
-            setFolders(newFolders);
-            closeModalSafe();
-            applyChanges();
-        });
-        toolbar.append(renameBtn).append(deleteBtn);
-        wrap.prepend(toolbar);
-
         openModalWithEdgeScroll({
-            title: folder.name || 'Папка',
-            html: wrap,
+            title: 'Порядок кнопок в папке',
+            html: list,
             size: 'medium',
             scroll_to_center: false,
             onBack: function() {
-                closeModalSafe();
-                setTimeout(function() { openEditDialog(); }, 200);
+                Lampa.Modal.close();
+                updateFolderIcon(folder);
+                openFolderMenu(folder);
             }
         });
-        focusModalController();
+    }
+
+    function saveFolderButtonOrder(folder, list) {
+        var newOrder = [];
+        list.find('.menu-edit-list__item').each(function() {
+            newOrder.push($(this).data('btnId'));
+        });
+        folder.buttons = newOrder;
+        var folders = getFolders();
+        for (var i = 0; i < folders.length; i++) {
+            if (folders[i].id === folder.id) {
+                folders[i].buttons = newOrder;
+                break;
+            }
+        }
+        setFolders(folders);
+        updateFolderIcon(folder);
+    }
+
+    function updateFolderIcon(folder) {
+        if (!folder.buttons || folder.buttons.length === 0) return;
+        var folderBtn = currentContainer.find('.button--folder[data-folder-id="' + escapeHtml(folder.id) + '"]');
+        if (folderBtn.length) {
+            if (folder.customIcon) {
+                folderBtn.find('svg').replaceWith($(folder.customIcon));
+            } else {
+                var firstBtn = findButton(folder.buttons[0]);
+                if (firstBtn && firstBtn.length) {
+                    var iconEl = firstBtn.find('svg').first();
+                    if (iconEl.length) {
+                        folderBtn.find('svg').replaceWith(iconEl.clone());
+                    } else {
+                        setDefaultFolderIcon(folderBtn);
+                    }
+                } else {
+                    setDefaultFolderIcon(folderBtn);
+                }
+            }
+        }
+    }
+
+    function setDefaultFolderIcon(folderBtn) {
+        var defaultIcon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>';
+        folderBtn.find('svg').replaceWith(defaultIcon);
+    }
+
+    function updateFolder(folderId, updates) {
+        var folders = getFolders();
+        for (var i = 0; i < folders.length; i++) {
+            if (folders[i].id === folderId) {
+                if (updates.name !== undefined) folders[i].name = updates.name;
+                if (updates.customIcon !== undefined) folders[i].customIcon = updates.customIcon;
+                setFolders(folders);
+                return folders[i];
+            }
+        }
+        return null;
+    }
+
+    function getDefaultIconForFolder(folder) {
+        if (folder.customIcon) return folder.customIcon;
+        var firstBtn = findButton(folder.buttons[0]);
+        if (!firstBtn || !firstBtn.length) return '';
+        var svg = firstBtn.find('svg').first();
+        return svg.length ? svg.get(0).outerHTML : '';
+    }
+
+    function openFolderNamePicker(folder, listItem) {
+        var currentName = folder.name || '';
+        function applyName(val) {
+            var v = (val && String(val).trim()) || '';
+            if (!v) return;
+            updateFolder(folder.id, { name: v });
+            if (listItem && listItem.length) {
+                listItem.find('.menu-edit-list__title').html(escapeHtml(v) + ' <span style="opacity:0.5">(' + folder.buttons.length + ')</span>');
+            }
+            setTimeout(function() { applyChanges(); refreshController(); }, DELAY_AFTER_APPLY_MS);
+        }
+        if (typeof Lampa.Input !== 'undefined' && typeof Lampa.Input.edit === 'function') {
+            Lampa.Input.edit({
+                free: true,
+                title: 'Название папки',
+                nosave: true,
+                value: currentName,
+                nomic: true
+            }, function(value) {
+                applyName(value);
+            });
+        } else {
+            openTextInputModal({
+                title: 'Название папки',
+                placeholder: 'Название папки',
+                value: currentName,
+                onDone: function(val) {
+                    applyName(val);
+                },
+                onBack: function() {
+                    if (typeof Lampa.Modal !== 'undefined' && Lampa.Modal.close) Lampa.Modal.close();
+                    setTimeout(function() { refreshController(); }, DELAY_AFTER_APPLY_MS);
+                }
+            });
+        }
+    }
+
+    function openFolderIconPicker(folder, listItem) {
+        buildIconPicker({
+            title: 'Иконка папки',
+            defaultIconHtml: getDefaultIconForFolder(folder),
+            onChoice: function(isDefault, chosenHtml) {
+                updateFolder(folder.id, { customIcon: isDefault ? undefined : chosenHtml });
+                reopenButtonEditorAfterColorPicker(true);
+            }
+        });
+    }
+
+    function createFolder(name, buttonIds) {
+        var folders = getFolders();
+        var folder = { id: 'folder_' + Date.now(), name: name, buttons: buttonIds };
+        folders.push(folder);
+        setFolders(folders);
+        return folder;
+    }
+
+    function deleteFolder(folderId) {
+        var folders = getFolders();
+        folders = folders.filter(function(f) { return f.id !== folderId; });
+        setFolders(folders);
+    }
+
+    function openCreateFolderDialog() {
+        if (typeof Lampa.Input !== 'undefined' && typeof Lampa.Input.edit === 'function') {
+            Lampa.Input.edit({
+                free: true,
+                title: 'Название папки',
+                nosave: true,
+                value: '',
+                nomic: true
+            }, function(folderName) {
+                if (!folderName || !String(folderName).trim()) {
+                    Lampa.Noty.show('Введите название папки');
+                    openEditDialog();
+                    return;
+                }
+                openSelectButtonsDialog(String(folderName).trim());
+            });
+        } else {
+            openTextInputModal({
+                title: 'Название папки',
+                placeholder: 'Название папки',
+                value: '',
+                onDone: function(val) {
+                    if (!val) {
+                        Lampa.Noty.show('Введите название папки');
+                        openEditDialog();
+                        return;
+                    }
+                    openSelectButtonsDialog(val);
+                },
+                onBack: function() {
+                    if (typeof Lampa.Modal !== 'undefined' && Lampa.Modal.close) Lampa.Modal.close();
+                    openEditDialog();
+                }
+            });
+        }
+    }
+
+    function openSelectButtonsDialog(folderName) {
+        var selectedButtons = [];
+        var list = $('<div class="menu-edit-list"></div>');
+        var buttonsInFolders = getButtonsInFolders();
+        var sortedButtons = sortByCustomOrder(allButtonsOriginal.slice());
+        sortedButtons.forEach(function(btn) {
+            var btnId = getButtonId(btn);
+            if (buttonsInFolders.indexOf(btnId) !== -1) return;
+            var displayName = getButtonDisplayName(btn, sortedButtons);
+            var iconElement = btn.find('svg').first();
+            var icon = iconElement.length ? iconElement.clone() : $('<svg></svg>');
+            var item = $('<div class="menu-edit-list__item">' +
+                '<div class="menu-edit-list__icon"></div>' +
+                '<div class="menu-edit-list__title">' + escapeHtml(displayName) + '</div>' +
+                '<div class="menu-edit-list__toggle selector">' +
+                '<svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+                '<rect x="1.89111" y="1.78369" width="21.793" height="21.793" rx="3.5" stroke="currentColor" stroke-width="3"/>' +
+                '<path d="M7.44873 12.9658L10.8179 16.3349L18.1269 9.02588" stroke="currentColor" stroke-width="3" class="dot" opacity="0" stroke-linecap="round"/>' +
+                '</svg></div></div>');
+            item.find('.menu-edit-list__icon').append(icon);
+            item.find('.menu-edit-list__toggle').on('hover:enter', function() {
+                var index = selectedButtons.indexOf(btnId);
+                if (index !== -1) {
+                    selectedButtons.splice(index, 1);
+                    item.find('.dot').attr('opacity', '0');
+                } else {
+                    selectedButtons.push(btnId);
+                    item.find('.dot').attr('opacity', '1');
+                }
+            });
+            list.append(item);
+        });
+        var createBtn = $('<div class="selector folder-create-confirm">' +
+            '<span class="menu-edit-list__create-folder-spacer"></span>' +
+            '<div class="menu-edit-list__create-folder-inner">' +
+            '<div class="menu-edit-list__icon">' + toolbarSvgFolderConfirm() + '</div>' +
+            '<div class="buttons-plugin-ui-text menu-edit-list__toolbar-label">Создать папку "' + escapeHtml(folderName) + '"</div>' +
+            '</div>' +
+            '<span class="menu-edit-list__create-folder-spacer"></span></div>');
+        createBtn.on('hover:enter', function() {
+            if (selectedButtons.length < 2) {
+                Lampa.Noty.show('Выберите минимум 2 кнопки');
+                return;
+            }
+            var folder = createFolder(folderName, selectedButtons);
+            var itemOrder = getItemOrder();
+            if (itemOrder.length === 0) {
+                currentButtons.forEach(function(btn) {
+                    itemOrder.push({ type: 'button', id: getButtonId(btn) });
+                });
+            }
+            var folderAdded = false;
+            for (var i = 0; i < selectedButtons.length; i++) {
+                var btnId = selectedButtons[i];
+                for (var j = 0; j < itemOrder.length; j++) {
+                    if (itemOrder[j].type === 'button' && itemOrder[j].id === btnId) {
+                        if (!folderAdded) {
+                            itemOrder[j] = { type: 'folder', id: folder.id };
+                            folderAdded = true;
+                        } else {
+                            itemOrder.splice(j, 1);
+                            j--;
+                        }
+                        break;
+                    }
+                }
+                for (var k = 0; k < currentButtons.length; k++) {
+                    if (getButtonId(currentButtons[k]) === btnId) {
+                        currentButtons.splice(k, 1);
+                        break;
+                    }
+                }
+            }
+            if (!folderAdded) {
+                itemOrder.push({ type: 'folder', id: folder.id });
+            }
+            setItemOrder(itemOrder);
+            Lampa.Modal.close();
+            Lampa.Noty.show('Папка создана "' + folderName + '"');
+            if (currentContainer) {
+                currentContainer.data('buttons-processed', false);
+                reorderButtons(currentContainer);
+            }
+            refreshController();
+        });
+        list.append(createBtn);
+        openModalWithEdgeScroll({
+            title: 'Выберите кнопки для папки',
+            html: list,
+            size: 'medium',
+            scroll_to_center: true,
+            onBack: function() {
+                Lampa.Modal.close();
+                openEditDialog();
+            }
+        });
+    }
+
+    function saveItemOrder() {
+        var order = [];
+        $('.menu-edit-list .menu-edit-list__item').not('.menu-edit-list__create-folder').each(function() {
+            var $item = $(this);
+            var itemType = $item.data('itemType');
+            if (itemType === 'folder') {
+                order.push({ type: 'folder', id: $item.data('folderId') });
+            } else if (itemType === 'button') {
+                order.push({ type: 'button', id: $item.data('buttonId') });
+            }
+        });
+        setItemOrder(order);
     }
 
     function openEditDialog() {
-        if (!currentContainer) return;
-        var wrap = $('<div class="buttons-editor-wrap"></div>');
-        var list = $('<div class="buttons-editor-list"></div>');
-        wrap.append(list);
-
-        function renderList() {
-            list.empty();
-            if (!currentButtons.length) {
-                list.append($('<div class="buttons-editor-empty buttons-plugin-ui-text">Немає кнопок для редагування</div>'));
-                return;
-            }
-            currentButtons.forEach(function(btn, idx) {
+        var folders = getFolders();
+        var buttonsInFolders = getButtonsInFolders();
+        if (currentContainer) {
+            var categories = categorizeButtons(currentContainer);
+            var allButtons = getAllButtonsFromCategories(categories);
+            var uniqueButtons = [];
+            var seenIds = {};
+            allButtons.forEach(function(btn) {
                 var btnId = getButtonId(btn);
-                var label = btn.find('span').first().text().trim() || btnId;
-                var isHidden = btn.hasClass('hidden');
-                var customLabel = getCustomLabels()[btnId] || '';
-                var row = $('<div class="buttons-editor-row selector" tabindex="0"></div>');
-                var posEl = $('<div class="buttons-editor-pos buttons-plugin-ui-text">' + (idx + 1) + '</div>');
-                var iconEl = $('<div class="buttons-editor-icon"></div>');
-                var svg = btn.find('svg').first();
-                if (svg.length) {
-                    iconEl.append(svg.clone());
-                } else {
-                    iconEl.append($(folderPlaceholderSvgStr()));
+                if (!seenIds[btnId]) {
+                    seenIds[btnId] = true;
+                    uniqueButtons.push(btn);
                 }
-                var nameEl = $('<div class="buttons-editor-name buttons-plugin-ui-text"></div>');
-                nameEl.text(customLabel || label);
-                if (isHidden) {
-                    nameEl.addClass('buttons-editor-name--hidden');
-                }
-                row.append(posEl).append(iconEl).append(nameEl);
-                row.on('hover:enter', function() {
-                    openItemMenu(btn, btnId, label, customLabel, isHidden, idx);
-                });
-                list.append(row);
+            });
+            allButtons = sortByCustomOrder(uniqueButtons);
+            allButtonsCache = allButtons;
+            currentButtons = allButtons.filter(function(btn) {
+                return buttonsInFolders.indexOf(getButtonId(btn)) === -1;
             });
         }
-
-        renderList();
-
-        var toolbar = $('<div class="buttons-editor-toolbar buttons-plugin-toolbar"></div>');
-        var upBtn = $('<div class="buttons-editor-tool-btn selector" tabindex="0" title="Вгору">' +
-            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg></div>');
-        upBtn.on('hover:enter', function() {
-            var focused = list.find('.selector.focused').first();
-            if (!focused.length) return;
-            var idx = list.children().index(focused);
-            if (idx <= 0) return;
-            var tmp = currentButtons[idx - 1];
-            currentButtons[idx - 1] = currentButtons[idx];
-            currentButtons[idx] = tmp;
-            saveOrder();
-            applyChanges();
-            setTimeout(function() {
-                renderList();
-                list.children().eq(idx - 1).addClass('selector').focus();
-            }, 100);
+        applyCustomLabels(currentButtons);
+        if (currentContainer) {
+            var editToolbar = currentContainer.find('.full-start-new__buttons');
+            if (editToolbar.length) {
+                applyIconsAndColorsToButtons(editToolbar.find('.full-start__button'));
+            }
+        }
+        var list = $('<div class="menu-edit-list buttons-plugin-order-modal"></div>');
+        var hidden = getHiddenButtons();
+        var createFolderBtn = $('<div class="menu-edit-list__create-folder menu-edit-list__toolbar-block selector">' +
+            '<span class="menu-edit-list__create-folder-spacer"></span>' +
+            '<div class="menu-edit-list__create-folder-inner">' +
+            '<div class="menu-edit-list__icon">' +
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+            '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>' +
+            '<line x1="12" y1="11" x2="12" y2="17"></line><line x1="9" y1="14" x2="15" y2="14"></line>' +
+            '</svg></div>' +
+            '<div class="menu-edit-list__title buttons-plugin-ui-text">Создать папку</div></div>' +
+            '<span class="menu-edit-list__create-folder-spacer"></span></div>');
+        createFolderBtn.on('hover:enter', function() {
+            Lampa.Modal.close();
+            openCreateFolderDialog();
         });
-        var downBtn = $('<div class="buttons-editor-tool-btn selector" tabindex="0" title="Вниз">' +
-            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div>');
-        downBtn.on('hover:enter', function() {
-            var focused = list.find('.selector.focused').first();
-            if (!focused.length) return;
-            var idx = list.children().index(focused);
-            if (idx < 0 || idx >= currentButtons.length - 1) return;
-            var tmp = currentButtons[idx + 1];
-            currentButtons[idx + 1] = currentButtons[idx];
-            currentButtons[idx] = tmp;
-            saveOrder();
-            applyChanges();
+        var globalIconColorBtn = $('<div class="selector viewmode-switch viewmode-switch--icon-color menu-edit-list__toolbar-block">' +
+            '<span class="menu-edit-list__create-folder-spacer"></span>' +
+            '<div class="menu-edit-list__create-folder-inner">' +
+            '<div class="menu-edit-list__icon">' + toolbarSvgIconColorGlobal() + '</div>' +
+            '<div class="menu-edit-list__title buttons-plugin-ui-text">Цвет иконок (для всех)</div>' +
+            '</div>' +
+            '<span class="menu-edit-list__create-folder-spacer"></span></div>');
+        globalIconColorBtn.on('hover:enter', function() {
+            if (typeof Lampa.Modal !== 'undefined' && Lampa.Modal.close) {
+                Lampa.Modal.close();
+            }
             setTimeout(function() {
-                renderList();
-                list.children().eq(idx + 1).addClass('selector').focus();
-            }, 100);
-        });
-        var resetBtn = $('<div class="buttons-editor-tool-btn selector" tabindex="0" title="Скинути порядок">' +
-            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div>');
-        resetBtn.on('hover:enter', function() {
-            setCustomOrder([]);
-            setItemOrder([]);
-            applyChanges();
-            renderList();
-        });
-        var colorBtn = $('<div class="buttons-editor-tool-btn selector" tabindex="0" title="Колір іконок">' +
-            iconSvgPalette() + '</div>');
-        colorBtn.on('hover:enter', function() {
-            closeModalSafe();
-            setTimeout(function() {
-                openColorPickerModal(null);
+                openColorPickerModal();
             }, 200);
         });
-        var createFolderBtn = $('<div class="buttons-editor-tool-btn selector" tabindex="0" title="Створити папку">' +
-            toolbarSvgFolderConfirm() + '</div>');
-        createFolderBtn.on('hover:enter', function() {
-            closeModalSafe();
-            setTimeout(function() {
+        var modes = ['default', 'icons', 'always'];
+        var labels = {default: 'Стандартный', icons: 'Только иконки', always: 'С текстом'};
+        var currentMode = Lampa.Storage.get(STORAGE_KEYS.viewmode, 'default');
+        var modeBtn = $('<div class="selector viewmode-switch menu-edit-list__toolbar-block">' +
+            '<span class="menu-edit-list__create-folder-spacer"></span>' +
+            '<div class="menu-edit-list__create-folder-inner">' +
+            '<div class="menu-edit-list__icon menu-edit-list__icon--viewmode">' + getViewModeToolbarSvg(currentMode) + '</div>' +
+            '<div class="menu-edit-list__title menu-edit-list__toolbar-label buttons-plugin-ui-text">Вид кнопок: ' + labels[currentMode] + '</div>' +
+            '</div>' +
+            '<span class="menu-edit-list__create-folder-spacer"></span></div>');
+        modeBtn.on('hover:enter', function() {
+            var idx = modes.indexOf(currentMode);
+            idx = (idx + 1) % modes.length;
+            currentMode = modes[idx];
+            Lampa.Storage.set(STORAGE_KEYS.viewmode, currentMode);
+            var $row = $(this);
+            $row.find('.menu-edit-list__toolbar-label').text('Вид кнопок: ' + labels[currentMode]);
+            $row.find('.menu-edit-list__icon--viewmode').html(getViewModeToolbarSvg(currentMode));
+            if (currentContainer) {
+                var target = currentContainer.find('.full-start-new__buttons');
+                target.removeClass('icons-only always-text');
+                if (currentMode === 'icons') target.addClass('icons-only');
+                if (currentMode === 'always') target.addClass('always-text');
+            }
+        });
+        var toolbarStack = $('<div class="menu-edit-list__toolbar-stack"></div>');
+        toolbarStack.append(modeBtn);
+        toolbarStack.append(globalIconColorBtn);
+        toolbarStack.append(createFolderBtn);
+        list.append(toolbarStack);
+
+        function createFolderItem(folder) {
+            var folderIconHtml = folder.customIcon || (findButton(folder.buttons[0]) && findButton(folder.buttons[0]).find('svg').first().length ? findButton(folder.buttons[0]).find('svg').first().get(0).outerHTML : '');
+            var folderIcon = folderIconHtml ? $(folderIconHtml).clone() : $('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>');
+
+            var folderResolvedColor = getPerButtonIconColors()[folder.id] || getGlobalIconColor() || '';
+            paintSvgWithColor(folderIcon, folderResolvedColor);
+            var item = $('<div class="menu-edit-list__item folder-item">' +
+                '<div class="menu-edit-list__icon"></div>' +
+                '<div class="menu-edit-list__title">' + escapeHtml(folder.name) + ' <span style="opacity:0.5">(' + folder.buttons.length + ')</span></div>' +
+                '<div class="menu-edit-list__change-name selector" title="Сменить название">' +
+                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" width="18" height="18"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" stroke="currentColor" stroke-width="1.5"/></svg></div>' +
+                '<div class="menu-edit-list__change-icon selector" title="Сменить иконку">' +
+                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>' +
+                '<div class="menu-edit-list__change-color selector" title="Цвет иконки">' + iconSvgPalette() + '</div>' +
+                '<div class="menu-edit-list__move move-up selector"><svg width="22" height="14" viewBox="0 0 22 14" fill="none"><path d="M2 12L11 3L20 12" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg></div>' +
+                '<div class="menu-edit-list__move move-down selector"><svg width="22" height="14" viewBox="0 0 22 14" fill="none"><path d="M2 2L11 11L20 2" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg></div>' +
+                '<div class="menu-edit-list__delete selector">' +
+                '<svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+                '<rect x="1.89111" y="1.78369" width="21.793" height="21.793" rx="3.5" stroke="currentColor" stroke-width="3"/>' +
+                '<path d="M9.5 9.5L16.5 16.5M16.5 9.5L9.5 16.5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></div></div>');
+            item.find('.menu-edit-list__icon').append(folderIcon);
+            item.data('folderId', folder.id);
+            item.data('itemType', 'folder');
+            item.find('.menu-edit-list__change-name').on('hover:enter', function() {
+                if (typeof Lampa.Modal !== 'undefined' && Lampa.Modal.close) Lampa.Modal.close();
+                setTimeout(function() { openFolderNamePicker(folder, item); }, 200);
+            });
+            item.find('.menu-edit-list__change-icon').on('hover:enter', function() {
+                if (typeof Lampa.Modal !== 'undefined' && Lampa.Modal.close) Lampa.Modal.close();
+                setTimeout(function() { openFolderIconPicker(folder, item); }, 200);
+            });
+            item.find('.menu-edit-list__change-color').on('hover:enter', function() {
+                if (typeof Lampa.Modal !== 'undefined' && Lampa.Modal.close) {
+                    Lampa.Modal.close();
+                }
+                setTimeout(function() {
+                    openColorPickerModal(folder.id);
+                }, 200);
+            });
+            item.find('.move-up').on('hover:enter', function() {
+                var prev = item.prev();
+                while (prev.length && (prev.hasClass('menu-edit-list__toolbar-stack') || prev.hasClass('menu-edit-list__create-folder') || prev.hasClass('viewmode-switch'))) {
+                    prev = prev.prev();
+                }
+                if (prev.length) {
+                    item.insertBefore(prev);
+                    saveItemOrder();
+                }
+            });
+            item.find('.move-down').on('hover:enter', function() {
+                var next = item.next();
+                while (next.length && next.hasClass('folder-reset-button')) next = next.next();
+                if (next.length && !next.hasClass('folder-reset-button')) {
+                    item.insertAfter(next);
+                    saveItemOrder();
+                }
+            });
+            item.find('.menu-edit-list__delete').on('hover:enter', function() {
+                var folderId = folder.id;
+                var folderButtons = folder.buttons.slice();
+                deleteFolder(folderId);
+                var itemOrder = getItemOrder();
+                var newItemOrder = [];
+                for (var i = 0; i < itemOrder.length; i++) {
+                    if (itemOrder[i].type === 'folder' && itemOrder[i].id === folderId) {
+                        folderButtons.forEach(function(btnId) {
+                            newItemOrder.push({ type: 'button', id: btnId });
+                        });
+                    } else {
+                        newItemOrder.push(itemOrder[i]);
+                    }
+                }
+                setItemOrder(newItemOrder);
+                item.remove();
+                Lampa.Noty.show('Папка удалена');
+                if (typeof Lampa.Modal !== 'undefined' && Lampa.Modal.close) {
+                    Lampa.Modal.close();
+                }
+                setTimeout(function() {
+                    if (currentContainer) {
+                        currentContainer.find('.button--play, .button--edit-order, .button--folder').remove();
+                        currentContainer.data('buttons-processed', false);
+                        var targetContainer = currentContainer.find('.full-start-new__buttons');
+                        allButtonsOriginal.forEach(function(originalBtn) {
+                            var btnId = getButtonId(originalBtn);
+                            var exists = false;
+                            targetContainer.find('.full-start__button').each(function() {
+                                if (getButtonId($(this)) === btnId) { exists = true; return false; }
+                            });
+                            if (!exists) {
+                                var clonedBtn = originalBtn.clone(true, true);
+                                clonedBtn.css({ 'opacity': '1', 'animation': 'none' });
+                                targetContainer.append(clonedBtn);
+                            }
+                        });
+                        reorderButtons(currentContainer);
+                        refreshController();
+                    }
+                }, 50);
+            });
+            return item;
+        }
+
+        function openNamePicker(btn, btnId) {
+            var defaultLabel = getDefaultLabelForButton(btnId);
+            var currentLabel = getCustomLabels()[btnId] || defaultLabel || '';
+            function applyName(val) {
+                var v = (val && String(val).trim()) || '';
+                var stored = getCustomLabels();
+                var labels = {};
+                for (var k in stored) { if (stored.hasOwnProperty(k)) labels[k] = stored[k]; }
+                if (v === '') {
+                    labels[btnId] = defaultLabel || '';
+                } else {
+                    labels[btnId] = v;
+                }
+                setCustomLabels(labels);
+                setTimeout(function() { applyChanges(); refreshController(); }, DELAY_AFTER_APPLY_MS);
+            }
+            if (typeof Lampa.Input !== 'undefined' && typeof Lampa.Input.edit === 'function') {
+                Lampa.Input.edit({
+                    free: true,
+                    title: 'Название кнопки',
+                    nosave: true,
+                    value: currentLabel,
+                    nomic: true
+                }, function(value) {
+                    applyName(value);
+                });
+            } else {
                 openTextInputModal({
-                    title: 'Нова папка',
-                    placeholder: 'Назва папки',
-                    value: '',
+                    title: 'Название кнопки',
+                    placeholder: 'Название кнопки',
+                    value: currentLabel,
                     onDone: function(val) {
-                        if (val) {
-                            var folders = getFolders();
-                            var newFolder = {
-                                id: 'folder_' + Date.now(),
-                                name: val,
-                                buttons: []
-                            };
-                            folders.push(newFolder);
-                            setFolders(folders);
-                            applyChanges();
-                        }
-                        setTimeout(function() { openEditDialog(); }, 200);
+                        applyName(val);
                     },
                     onBack: function() {
-                        setTimeout(function() { openEditDialog(); }, 200);
+                        if (typeof Lampa.Modal !== 'undefined' && Lampa.Modal.close) Lampa.Modal.close();
+                        setTimeout(function() { refreshController(); }, DELAY_AFTER_APPLY_MS);
                     }
                 });
-            }, 200);
-        });
-        var toggleEditorBtn = $('<div class="buttons-editor-tool-btn selector" tabindex="0" title="Приховати кнопку редагування">' +
-            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></div>');
-        toggleEditorBtn.on('hover:enter', function() {
-            Lampa.Storage.set(STORAGE_KEYS.editor_enabled, false);
-            closeModalSafe();
-            if (currentContainer) {
-                currentContainer.find('.button--edit-order').remove();
             }
-        });
-        toolbar.append(upBtn).append(downBtn).append(resetBtn).append(colorBtn).append(createFolderBtn).append(toggleEditorBtn);
-        wrap.prepend(toolbar);
+        }
 
-        openModalWithEdgeScroll({
-            title: 'Редактор кнопок',
-            html: wrap,
-            size: 'medium',
-            scroll_to_center: false,
-            onBack: function() {
-                closeModalSafe();
-            }
-        });
-        focusModalController();
-    }
-
-    function openItemMenu(btn, btnId, label, customLabel, isHidden, idx) {
-        closeModalSafe();
-        var wrap = $('<div class="item-menu-wrap"></div>');
-        var list = $('<div class="item-menu-list"></div>');
-        wrap.append(list);
-
-        var items = [];
-
-        items.push({
-            icon: isHidden
-                ? '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>'
-                : '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>',
-            label: isHidden ? 'Показати' : 'Приховати',
-            action: function() {
-                var hidden = getHiddenButtons();
-                if (isHidden) {
-                    hidden = hidden.filter(function(id) { return id !== btnId; });
-                } else {
-                    hidden.push(btnId);
+        function createButtonItem(btn) {
+            var displayName = getButtonDisplayName(btn, currentButtons);
+            var icon = btn.find('svg').clone();
+            var btnId = getButtonId(btn);
+            var isHidden = hidden.indexOf(btnId) !== -1;
+            var item = $('<div class="menu-edit-list__item">' +
+                '<div class="menu-edit-list__icon"></div>' +
+                '<div class="menu-edit-list__title"></div>' +
+                '<div class="menu-edit-list__change-name selector" title="Сменить название">' +
+                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" width="18" height="18"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" stroke="currentColor" stroke-width="1.5"/></svg></div>' +
+                '<div class="menu-edit-list__change-icon selector menu-edit-list__icon-cell" title="Сменить иконку">' +
+                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>' +
+                '</div>' +
+                '<div class="menu-edit-list__change-color selector" title="Цвет иконки">' + iconSvgPalette() + '</div>' +
+                '<div class="menu-edit-list__move move-up selector">' +
+                '<svg width="22" height="14" viewBox="0 0 22 14" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+                '<path d="M2 12L11 3L20 12" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>' +
+                '</svg>' +
+                '</div>' +
+                '<div class="menu-edit-list__move move-down selector">' +
+                '<svg width="22" height="14" viewBox="0 0 22 14" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+                '<path d="M2 2L11 11L20 2" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>' +
+                '</svg>' +
+                '</div>' +
+                '<div class="menu-edit-list__toggle toggle selector">' +
+                '<svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+                '<rect x="1.89111" y="1.78369" width="21.793" height="21.793" rx="3.5" stroke="currentColor" stroke-width="3"/>' +
+                '<path d="M7.44873 12.9658L10.8179 16.3349L18.1269 9.02588" stroke="currentColor" stroke-width="3" class="dot" opacity="' + (isHidden ? '0' : '1') + '" stroke-linecap="round"/>' +
+                '</svg>' +
+                '</div>' +
+                '</div>');
+            item.toggleClass('menu-edit-list__item-hidden', isHidden);
+            item.find('.menu-edit-list__icon').append(icon);
+            item.find('.menu-edit-list__title').text(displayName);
+            item.data('button', btn);
+            item.data('buttonId', btnId);
+            item.data('itemType', 'button');
+            item.find('.menu-edit-list__change-name').on('hover:enter', function() {
+                if (typeof Lampa.Modal !== 'undefined' && Lampa.Modal.close) Lampa.Modal.close();
+                setTimeout(function() { openNamePicker(btn, btnId); }, 200);
+            });
+            item.find('.menu-edit-list__change-icon').on('hover:enter', function() {
+                if (typeof Lampa.Modal !== 'undefined' && Lampa.Modal.close) {
+                    Lampa.Modal.close();
                 }
-                setHiddenButtons(hidden);
-                applyChanges();
-                setTimeout(function() { openEditDialog(); }, 200);
-            }
-        });
-
-        items.push({
-            icon: iconSvgPalette(),
-            label: 'Колір іконки',
-            action: function() {
+                var defaultIcon = getDefaultIconForButton(btnId);
+                setTimeout(function() {
+                    openIconPicker(btn, btnId, defaultIcon, null);
+                }, 200);
+            });
+            item.find('.menu-edit-list__change-color').on('hover:enter', function() {
+                if (typeof Lampa.Modal !== 'undefined' && Lampa.Modal.close) {
+                    Lampa.Modal.close();
+                }
                 setTimeout(function() {
                     openColorPickerModal(btnId);
                 }, 200);
-            }
-        });
+            });
+            item.find('.move-up').on('hover:enter', function() {
+                var prev = item.prev();
+                while (prev.length && (prev.hasClass('menu-edit-list__toolbar-stack') || prev.hasClass('viewmode-switch') || prev.hasClass('menu-edit-list__create-folder'))) {
+                    prev = prev.prev();
+                }
+                if (prev.length && !prev.hasClass('menu-edit-list__toolbar-stack') && !prev.hasClass('viewmode-switch') && !prev.hasClass('menu-edit-list__create-folder')) {
+                    item.insertBefore(prev);
+                    var btnIndex = currentButtons.indexOf(btn);
+                    if (btnIndex > 0) {
+                        currentButtons.splice(btnIndex, 1);
+                        currentButtons.splice(btnIndex - 1, 0, btn);
+                    }
+                    saveItemOrder();
+                }
+            });
+            item.find('.move-down').on('hover:enter', function() {
+                var next = item.next();
+                while (next.length && next.hasClass('folder-reset-button')) {
+                    next = next.next();
+                }
+                if (next.length && !next.hasClass('folder-reset-button')) {
+                    item.insertAfter(next);
+                    var btnIndex = currentButtons.indexOf(btn);
+                    if (btnIndex < currentButtons.length - 1) {
+                        currentButtons.splice(btnIndex, 1);
+                        currentButtons.splice(btnIndex + 1, 0, btn);
+                    }
+                    saveItemOrder();
+                }
+            });
+            item.find('.toggle').on('hover:enter', function() {
+                var isNowHidden = !item.hasClass('menu-edit-list__item-hidden');
+                item.toggleClass('menu-edit-list__item-hidden', isNowHidden);
+                btn.toggleClass('hidden', isNowHidden);
+                item.find('.dot').attr('opacity', isNowHidden ? '0' : '1');
+                var hiddenList = getHiddenButtons();
+                var index = hiddenList.indexOf(btnId);
+                if (isNowHidden && index === -1) {
+                    hiddenList.push(btnId);
+                } else if (!isNowHidden && index !== -1) {
+                    hiddenList.splice(index, 1);
+                }
+                setHiddenButtons(hiddenList);
+            });
+            return item;
+        }
 
-        items.push({
-            icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>',
-            label: 'Іконка',
-            action: function() {
-                var defaultIcon = getDefaultIconForButton(btnId);
-                setTimeout(function() {
-                    openIconPicker(btn, btnId, defaultIcon);
-                }, 200);
-            }
-        });
+        var itemOrder = getItemOrder();
+        if (itemOrder.length > 0) {
+            itemOrder.forEach(function(item) {
+                if (item.type === 'folder') {
+                    var folder = folders.find(function(f) { return f.id === item.id; });
+                    if (folder) list.append(createFolderItem(folder));
+                } else if (item.type === 'button') {
+                    var btn = currentButtons.find(function(b) { return getButtonId(b) === item.id; });
+                    if (btn) list.append(createButtonItem(btn));
+                }
+            });
+            currentButtons.forEach(function(btn) {
+                var btnId = getButtonId(btn);
+                if (!itemOrder.some(function(it) { return it.type === 'button' && it.id === btnId; })) {
+                    list.append(createButtonItem(btn));
+                }
+            });
+            folders.forEach(function(folder) {
+                if (!itemOrder.some(function(it) { return it.type === 'folder' && it.id === folder.id; })) {
+                    list.append(createFolderItem(folder));
+                }
+            });
+        } else {
+            folders.forEach(function(folder) {
+                list.append(createFolderItem(folder));
+            });
+            currentButtons.forEach(function(btn) {
+                list.append(createButtonItem(btn));
+            });
+        }
 
-        items.push({
-            icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>',
-            label: 'Назва',
-            action: function() {
-                setTimeout(function() {
-                    openTextInputModal({
-                        title: 'Назва кнопки',
-                        placeholder: 'Нова назва',
-                        value: customLabel || label,
-                        onDone: function(val) {
-                            var labels = getCustomLabels();
-                            if (val) {
-                                labels[btnId] = val;
-                            } else {
-                                delete labels[btnId];
+        var resetBtn = $('<div class="selector folder-reset-button">' +
+            '<span class="menu-edit-list__create-folder-spacer"></span>' +
+            '<div class="menu-edit-list__create-folder-inner">' +
+            '<div class="menu-edit-list__icon">' + toolbarSvgReset() + '</div>' +
+            '<div class="buttons-plugin-ui-text menu-edit-list__toolbar-label">Сбросить по умолчанию</div>' +
+            '</div>' +
+            '<span class="menu-edit-list__create-folder-spacer"></span></div>');
+        resetBtn.on('hover:enter', function() {
+            Lampa.Storage.set(STORAGE_KEYS.custom_order, []);
+            Lampa.Storage.set(STORAGE_KEYS.hidden, []);
+            Lampa.Storage.set(STORAGE_KEYS.custom_icons, {});
+            Lampa.Storage.set(STORAGE_KEYS.custom_labels, {});
+            Lampa.Storage.set(STORAGE_KEYS.viewmode, 'default');
+            Lampa.Storage.set(STORAGE_KEYS.folders, []);
+            Lampa.Storage.set(STORAGE_KEYS.item_order, []);
+            setGlobalIconColor('');
+            setPerButtonIconColors({});
+            Lampa.Modal.close();
+            setTimeout(function() {
+                if (currentContainer) {
+                    currentContainer.find('.button--play, .button--edit-order').remove();
+                    currentContainer.data('buttons-processed', false);
+                    var targetContainer = currentContainer.find('.full-start-new__buttons');
+                    targetContainer.find('.full-start__button').not('.button--edit-order, .button--play').each(function() {
+                        var $btn = $(this);
+                        var btnId = getButtonId($btn);
+                        var orig = allButtonsOriginal.find(function(b) { return getButtonId(b) === btnId; });
+                        if (orig && orig.length) {
+                            var origSvg = orig.find('svg').first();
+                            if (origSvg.length) {
+                                var $btnSvg = $btn.find('svg').first();
+                                if ($btnSvg.length) {
+                                    $btnSvg.replaceWith(origSvg.clone());
+                                }
                             }
-                            setCustomLabels(labels);
-                            applyChanges();
-                            setTimeout(function() { openEditDialog(); }, 200);
-                        },
-                        onBack: function() {
-                            setTimeout(function() { openEditDialog(); }, 200);
+                            var span = $btn.find('span').first();
+                            if (span.length) {
+                                span.removeAttr('data-original-text');
+                                span.text(orig.find('span').first().text().trim());
+                            }
                         }
                     });
-                }, 200);
-            }
-        });
-
-        var folders = getFolders();
-        if (folders.length) {
-            items.push({
-                icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>',
-                label: 'У папку',
-                action: function() {
-                    setTimeout(function() { openFolderSelectForButton(btnId); }, 200);
+                    var existingButtons = targetContainer.find('.full-start__button').toArray();
+                    allButtonsOriginal.forEach(function(originalBtn) {
+                        var btnId = getButtonId(originalBtn);
+                        var exists = false;
+                        for (var i = 0; i < existingButtons.length; i++) {
+                            if (getButtonId($(existingButtons[i])) === btnId) {
+                                exists = true;
+                                break;
+                            }
+                        }
+                        if (!exists) {
+                            var clonedBtn = originalBtn.clone(true, true);
+                            clonedBtn.css({ 'opacity': '1', 'animation': 'none' });
+                            targetContainer.append(clonedBtn);
+                        }
+                    });
+                    reorderButtons(currentContainer);
+                    refreshController();
                 }
-            });
-        }
-
-        items.push({
-            icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
-            label: 'Видалити з папки',
-            action: function() {
-                var folders = getFolders();
-                folders.forEach(function(f) {
-                    if (Array.isArray(f.buttons)) {
-                        f.buttons = f.buttons.filter(function(id) { return id !== btnId; });
-                    }
-                });
-                setFolders(folders);
-                applyChanges();
-                setTimeout(function() { openEditDialog(); }, 200);
-            }
+            }, DELAY_AFTER_APPLY_MS);
         });
-
-        items.forEach(function(item) {
-            var row = $('<div class="selector item-menu-row" tabindex="0"></div>');
-            var iconEl = $('<div class="item-menu-icon">' + item.icon + '</div>');
-            var labelEl = $('<div class="item-menu-label buttons-plugin-ui-text">' + escapeHtml(item.label) + '</div>');
-            row.append(iconEl).append(labelEl);
-            row.on('hover:enter', function() {
-                item.action();
-            });
-            list.append(row);
-        });
+        list.append(resetBtn);
 
         openModalWithEdgeScroll({
-            title: label,
-            html: wrap,
-            size: 'small',
+            title: 'Порядок кнопок',
+            html: list,
+            size: 'medium',
             scroll_to_center: false,
             onBack: function() {
-                closeModalSafe();
-                setTimeout(function() { openEditDialog(); }, 200);
+                Lampa.Modal.close();
+                applyChanges();
+                Lampa.Controller.toggle('full_start');
             }
         });
-        focusModalController();
+        setTimeout(function() {
+            syncModalFont();
+            focusModalController();
+        }, 250);
     }
 
-    function openFolderSelectForButton(btnId) {
-        closeModalSafe();
-        var folders = getFolders();
-        if (!folders.length) {
-            setTimeout(function() { openEditDialog(); }, 200);
-            return;
+    function reorderButtons(container, options) {
+        options = options || {};
+        var targetContainer = container.find('.full-start-new__buttons');
+        if (!targetContainer.length) return false;
+        var focusedButton = targetContainer.find('.full-start__button.focus').first();
+        var focusedButtonId = focusedButton.length ? getButtonId(focusedButton) : '';
+        currentContainer = container;
+        var isApplecation = container.hasClass('applecation');
+        if (!isApplecation) {
+            var scopeEl = targetContainer.parent();
+            if (!scopeEl.length) scopeEl = container;
+            scopeEl.addClass('buttons-plugin-scope');
         }
-        var wrap = $('<div class="folder-select-wrap"></div>');
-        var list = $('<div class="folder-select-list"></div>');
-        wrap.append(list);
-        folders.forEach(function(folder) {
-            var row = $('<div class="selector folder-select-row" tabindex="0"></div>');
-            var iconEl = $('<div class="folder-select-icon">' + folderPlaceholderSvgStr() + '</div>');
-            var nameEl = $('<div class="folder-select-name buttons-plugin-ui-text">' + escapeHtml(folder.name || 'Папка') + '</div>');
-            row.append(iconEl).append(nameEl);
-            row.on('hover:enter', function() {
-                if (!Array.isArray(folder.buttons)) folder.buttons = [];
-                if (folder.buttons.indexOf(btnId) === -1) {
-                    folder.buttons.push(btnId);
-                }
-                var all = getFolders();
-                var idx = all.findIndex(function(f) { return f.id === folder.id; });
-                if (idx !== -1) all[idx] = folder;
-                setFolders(all);
-                applyChanges();
-                closeModalSafe();
-                setTimeout(function() { openEditDialog(); }, 200);
+        container.find('.button--play, .button--edit-order, .button--folder').remove();
+        var categories = categorizeButtons(container);
+        var allButtons = sortByCustomOrder(getAllButtonsFromCategories(categories));
+        allButtonsCache = allButtons;
+        if (allButtonsOriginal.length === 0) {
+            allButtons.forEach(function(btn) {
+                allButtonsOriginal.push(btn.clone(true, true));
             });
-            list.append(row);
+        }
+        var folders = getFolders();
+        var buttonsInFolders = [];
+        folders.forEach(function(folder) {
+            buttonsInFolders = buttonsInFolders.concat(folder.buttons);
         });
-        openModalWithEdgeScroll({
-            title: 'Виберіть папку',
-            html: wrap,
-            size: 'small',
-            scroll_to_center: false,
-            onBack: function() {
-                closeModalSafe();
-                setTimeout(function() { openEditDialog(); }, 200);
+        currentButtons = allButtons.filter(function(btn) {
+            return buttonsInFolders.indexOf(getButtonId(btn)) === -1;
+        });
+        var existingButtons = targetContainer.find('.full-start__button').not('.button--edit-order, .button--folder').toArray();
+        var missingButtons = [];
+        existingButtons.forEach(function(existingBtn) {
+            var $existingBtn = $(existingBtn);
+            if (isExcluded($existingBtn)) return;
+            var existingId = getButtonId($existingBtn);
+            var found = false;
+            for (var i = 0; i < allButtons.length; i++) {
+                if (getButtonId(allButtons[i]) === existingId) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                missingButtons.push($existingBtn);
             }
         });
-        focusModalController();
+        if (missingButtons.length > 0) {
+            var seenIds = {};
+            allButtons.forEach(function(btn) {
+                seenIds[getButtonId(btn)] = true;
+            });
+            missingButtons.forEach(function($btn) {
+                var btnId = getButtonId($btn);
+                if (seenIds[btnId]) return;
+                seenIds[btnId] = true;
+                var type = getButtonType($btn);
+                if (categories[type]) {
+                    categories[type].push($btn);
+                } else {
+                    categories.other.push($btn);
+                }
+                if (!$btn.hasClass('selector')) {
+                    $btn.addClass('selector');
+                }
+            });
+            var uniqueButtons = [];
+            seenIds = {};
+            var allButtonsNew = getAllButtonsFromCategories(categories);
+            allButtonsNew.forEach(function(btn) {
+                var btnId = getButtonId(btn);
+                if (!seenIds[btnId]) {
+                    seenIds[btnId] = true;
+                    uniqueButtons.push(btn);
+                }
+            });
+            allButtons = sortByCustomOrder(uniqueButtons);
+            currentButtons = allButtons.filter(function(btn) {
+                return buttonsInFolders.indexOf(getButtonId(btn)) === -1;
+            });
+        }
+        targetContainer.children().detach();
+
+        var visibleButtons = layoutButtons(targetContainer, currentButtons, folders, buttonsInFolders, {
+            guardButtonsInFolders: false,
+            foldersFirstWhenNoOrder: true
+        });
+        var editButton = createEditButton();
+        targetContainer.append(editButton);
+        visibleButtons.push(editButton);
+        applyHiddenButtons(currentButtons);
+        applyCustomLabels(currentButtons);
+        applyIconsAndColorsToButtons(targetContainer.find('.full-start__button'));
+        var viewmode = Lampa.Storage.get(STORAGE_KEYS.viewmode, 'default');
+        targetContainer.removeClass('icons-only always-text');
+        if (viewmode === 'icons') targetContainer.addClass('icons-only');
+        if (viewmode === 'always') targetContainer.addClass('always-text');
+        if (options.animate === false) {
+            visibleButtons.forEach(function(btn) {
+                btn.css({ 'opacity': '1', 'animation': 'none', 'animation-delay': '' });
+            });
+        } else {
+            applyButtonAnimation(visibleButtons, isApplecation);
+            container.data('buttons-animation-until', Date.now() + 450 + Math.max(0, visibleButtons.length - 1) * 80);
+        }
+        setTimeout(function() {
+            setupButtonNavigation(container);
+            if (focusedButtonId && Lampa.Controller && typeof Lampa.Controller.collectionFocus === 'function') {
+                var restoredFocus = targetContainer.find('.full-start__button').filter(function() {
+                    return getButtonId($(this)) === focusedButtonId;
+                }).first();
+                if (restoredFocus.length) {
+                    try {
+                        Lampa.Controller.collectionFocus(restoredFocus, targetContainer);
+                    } catch (e) { logDebug('restore button focus', e); }
+                }
+            }
+        }, DELAY_AFTER_APPLY_MS);
+        return true;
+    }
+
+    window.lampa_buttons_plugin = window.lampa_buttons_plugin || {};
+    window.lampa_buttons_plugin.reorder = reorderButtons;
+
+    function setupButtonNavigation(container) {
+        if (Lampa.Controller && typeof Lampa.Controller.toggle === 'function') {
+            try {
+                Lampa.Controller.toggle('full_start');
+            } catch(e) { logDebug('setupButtonNavigation', e); }
+        }
+    }
+
+    function refreshController() {
+        if (!Lampa.Controller || typeof Lampa.Controller.toggle !== 'function') return;
+        setTimeout(function() {
+            try {
+                Lampa.Controller.toggle('full_start');
+                if (currentContainer) {
+                    setTimeout(function() {
+                        setupButtonNavigation(currentContainer);
+                    }, DELAY_AFTER_APPLY_MS);
+                }
+            } catch(e) { logDebug('refreshController', e); }
+        }, 50);
     }
 
     function init() {
-        Lampa.Storage.set(STORAGE_KEYS.plugin_version, PLUGIN_VERSION);
+        var storedVersion = Lampa.Storage.get(STORAGE_KEYS.plugin_version, '');
+        if (storedVersion !== PLUGIN_VERSION) {
+            Lampa.Storage.set(STORAGE_KEYS.plugin_version, PLUGIN_VERSION);
+        }
+        var style = $('<style>' +
+            '@keyframes button-fade-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }' +
+            '@keyframes button-fade-in-opacity { from { opacity: 0; } to { opacity: 1; } }' +
+            '.full-start-new__buttons.buttons-loading .full-start__button { visibility: hidden !important; }' +
+            '.applecation .full-start-new__buttons .full-start__button { opacity: 0; }' +
+            '.applecation .full-start__button.hidden { display: none !important; }' +
+            '.applecation .full-start-new__buttons.buttons-loading .full-start__button { visibility: hidden !important; }' +
+            '.applecation .full-start-new__buttons.icons-only .full-start__button span { display: none; }' +
+            '.applecation .full-start-new__buttons.always-text .full-start__button span { display: block !important; }' +
+            '.applecation .full-start-new__buttons { gap: 0.4em 0.1em !important; }' +
+            '.buttons-plugin-scope .full-start-new__buttons { display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; gap: 0.4em 0.1em !important; }' +
+            '.buttons-plugin-scope .full-start-new__buttons .full-start__button { opacity: 0; }' +
+            '.buttons-plugin-scope .full-start__button.hidden { display: none !important; }' +
+            '.buttons-plugin-scope .full-start-new__buttons.buttons-loading .full-start__button { visibility: hidden !important; }' +
+            '.menu-edit-list{display:flex;flex-direction:column;gap:.7em;padding-right:1em;max-width:100%;width:100%;box-sizing:border-box}' +
+            '.buttons-plugin-order-modal{min-width:22em;width:100%;box-sizing:border-box}' +
+            '.ci-color-picker-wrap.buttons-plugin-color-modal{min-width:22em;box-sizing:border-box}' +
+            '.buttons-plugin-ui-text,.menu-edit-list .menu-edit-list__title{font-family:inherit!important;font-size:inherit!important;font-weight:normal!important;font-style:normal!important}' +
+            '.menu-edit-list__item{display:grid;grid-template-columns:2.5em minmax(0,1fr) 2.4em 2.4em 2.4em 2.4em 2.4em 2.4em;align-items:center;gap:.35em;padding:.7em 1em;border-radius:.7em;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);box-sizing:border-box}' +
+            '.menu-edit-list__item .menu-edit-list__icon{width:2.5em;min-width:2.5em;height:2.5em;display:flex;align-items:center;justify-content:center;box-sizing:border-box}' +
+            '.menu-edit-list__item .menu-edit-list__icon svg{width:1.4em;height:1.4em}' +
+            '.menu-edit-list__item .menu-edit-list__title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:inherit;font-size:inherit}' +
+            '.menu-edit-list__item .menu-edit-list__move,.menu-edit-list__item .menu-edit-list__change-name,.menu-edit-list__item .menu-edit-list__change-icon,.menu-edit-list__item .menu-edit-list__change-color,.menu-edit-list__item .menu-edit-list__toggle,.menu-edit-list__item .menu-edit-list__delete{width:2.4em;min-width:2.4em;height:2.4em;display:flex;align-items:center;justify-content:center;box-sizing:border-box;border:1px solid rgba(255,255,255,.2);border-radius:.6em;background:rgba(255,255,255,.1)}' +
+            '.menu-edit-list__item .menu-edit-list__move svg{width:1.2em;height:.75em}' +
+            '.menu-edit-list__item .menu-edit-list__toggle svg{width:1.2em;height:1.2em}' +
+            '.menu-edit-list__item .menu-edit-list__change-name svg,.menu-edit-list__item .menu-edit-list__change-icon svg,.menu-edit-list__item .menu-edit-list__change-color svg{width:1.2em;height:1.2em}' +
+            '.menu-edit-list__move.focus,.menu-edit-list__change-name.focus,.menu-edit-list__change-icon.focus,.menu-edit-list__change-color.focus,.menu-edit-list__toggle.focus,.menu-edit-list__delete.focus{border-color:#fff!important}' +
+            '.viewmode-switch:not(.menu-edit-list__toolbar-block),.folder-reset-button{max-width:100%;box-sizing:border-box;white-space:normal;word-break:break-word;font-family:inherit;font-size:inherit}' +
+            '.folder-reset-button{background:rgba(200,100,80,.45);margin-top:.5em;border-radius:.7em;border:1px solid rgba(255,255,255,.15);display:flex;flex-direction:row;align-items:center;justify-content:center;gap:0;min-height:3.2em;padding:.6em 1em;box-sizing:border-box;width:100%;max-width:100%;cursor:pointer;user-select:none}' +
+            '.folder-reset-button.focus{border-color:#fff!important}' +
+            '.menu-edit-list__toolbar-stack{display:flex;flex-direction:column;gap:.7em;margin-bottom:.2em;width:100%;max-width:100%;box-sizing:border-box;align-items:stretch}' +
+            '.menu-edit-list__toolbar-stack>.menu-edit-list__toolbar-block,.menu-edit-list__toolbar-stack>.menu-edit-list__create-folder{margin-bottom:0!important;flex:0 0 auto}' +
+            '.menu-edit-list__toolbar-stack>.menu-edit-list__toolbar-block,.menu-edit-list__toolbar-stack>.menu-edit-list__create-folder{height:3.2em;min-height:3.2em!important;max-height:3.2em!important;overflow:hidden;line-height:1.25}' +
+            '.menu-edit-list__toolbar-block{border-radius:.7em;border:1px solid rgba(255,255,255,.08);box-sizing:border-box;padding:0 1em;display:flex!important;align-items:center;justify-content:center;background:rgba(255,255,255,.05)}' +
+            '.menu-edit-list__toolbar-block.focus{border-color:#fff!important;background:rgba(255,255,255,.1)}' +
+            '.menu-edit-list__create-folder{gap:0;background:rgba(255,255,255,.05)!important;padding:0 1em!important;border:1px solid rgba(255,255,255,.08);border-radius:.7em}' +
+            '.menu-edit-list__create-folder.focus{border-color:#fff!important;background:rgba(255,255,255,.1)}' +
+            '.menu-edit-list__toolbar-block.viewmode-switch{white-space:nowrap!important;word-break:normal!important}' +
+            '.menu-edit-list__create-folder-spacer{flex:1;min-width:0}' +
+            '.menu-edit-list__create-folder-inner{display:flex;align-items:center;gap:.5em;flex-shrink:0}' +
+            '.menu-edit-list__toolbar-stack .viewmode-switch .menu-edit-list__create-folder-inner{flex:0 1 auto;min-width:0;max-width:100%;justify-content:flex-start}' +
+            '.menu-edit-list__create-folder .menu-edit-list__icon,.menu-edit-list__toolbar-stack .viewmode-switch .menu-edit-list__icon{width:1.5em;min-width:1.5em;height:1.5em;display:flex;align-items:center;justify-content:center;flex-shrink:0}' +
+            '.menu-edit-list__create-folder .menu-edit-list__icon svg,.menu-edit-list__toolbar-stack .viewmode-switch .menu-edit-list__icon svg{width:1.35em;height:1.35em;display:block}' +
+            '.menu-edit-list__create-folder .menu-edit-list__title{text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}' +
+            '.menu-edit-list__toolbar-stack .viewmode-switch .menu-edit-list__title,.menu-edit-list__toolbar-stack .viewmode-switch .menu-edit-list__toolbar-label{text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;min-width:0;flex:1 1 auto}' +
+            '.folder-item{grid-template-columns:2.5em minmax(0,1fr) 2.4em 2.4em 2.4em 2.4em 2.4em 2.4em;align-items:center;min-height:3.2em}' +
+            '.folder-item .menu-edit-list__title{align-self:center}' +
+            '.button--folder{cursor:pointer}' +
+            '.folder-item .menu-edit-list__delete{align-self:center;justify-self:end}' +
+            '.menu-edit-list__item .menu-edit-list__delete svg{width:1.2em;height:1.2em}' +
+            '.folder-item .menu-edit-list__move,.folder-item .menu-edit-list__change-name,.folder-item .menu-edit-list__change-icon,.folder-item .menu-edit-list__change-color{margin-right:0}' +
+            '.folder-create-confirm{background:rgba(66,133,244,.55);margin-top:.5em;border-radius:.7em;border:1px solid rgba(255,255,255,.15);display:flex;flex-direction:row;align-items:center;justify-content:center;gap:0;min-height:3.2em;padding:.6em 1em;box-sizing:border-box;width:100%;max-width:100%;cursor:pointer;user-select:none}' +
+            '.folder-create-confirm.focus{border-color:#fff!important}' +
+            '.menu-edit-list__toolbar-stack .viewmode-switch--icon-color{background:rgba(255,255,255,.05)!important;border:1px solid rgba(255,255,255,.08)}' +
+            '.ci-color-picker-wrap{width:100%;max-width:100%;padding:0 1em .75em 1em;box-sizing:border-box;display:flex;flex-direction:column;gap:.7em;font-family:inherit;font-size:inherit;overflow:visible}' +
+            '.ci-color-picker-wrap .buttons-plugin-modal-row{display:flex;align-items:center;box-sizing:border-box;width:100%;max-width:100%;height:3.2em;min-height:3.2em;max-height:3.2em;padding:0 1em;border-radius:.7em;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.05);overflow:hidden;line-height:1.25}' +
+            '.ci-color-picker-wrap .buttons-plugin-modal-row.focus{border-color:#fff!important;background:rgba(255,255,255,.1)}' +
+            '.ci-color-picker-wrap .buttons-plugin-modal-row--between{justify-content:space-between;gap:.75em}' +
+            '.ci-color-picker-wrap .color-picker-default:not(.buttons-plugin-modal-row--between){gap:1em}' +
+            '.color-picker-default-swatch{width:1.5em;height:1.5em;border-radius:50%;background:#ccc;flex-shrink:0}' +
+            '.color-picker-default--ring .color-picker-default-swatch{box-shadow:inset 0 0 0 2px #fff}' +
+            '.ci-color-picker-wrap .hex-value{opacity:.85;min-width:0}' +
+            '.ci-color-picker-wrap .color-picker-default.focus,.ci-color-picker-wrap .color-picker-hex.focus{border-color:#fff!important;background:rgba(255,255,255,.1)}' +
+            '.color-picker-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(2.85em,1fr));justify-items:center;gap:.65em;padding:.35em .35em .65em;box-sizing:border-box;width:100%;max-width:100%;overflow:visible}' +
+            '.color-picker-tile{width:2.85em;height:2.85em;max-width:100%;border-radius:.55em;border:none;box-sizing:border-box;position:relative;box-shadow:inset 0 0 0 1px rgba(255,255,255,.22),0 .12em .45em rgba(0,0,0,.35);transition:transform .12s ease,box-shadow .12s ease}' +
+            '.color-picker-tile--light{box-shadow:inset 0 0 0 1px rgba(0,0,0,.38),0 .12em .45em rgba(0,0,0,.28)!important}' +
+            '.ci-color-picker-wrap .color-picker-tile.focus{transform:scale(1.06);z-index:1;box-shadow:inset 0 0 0 1px rgba(0,0,0,.45),0 0 0 2px rgba(10,20,30,.95),0 0 0 4px rgba(77,208,225,.95),0 .2em .55em rgba(0,0,0,.45)!important}' +
+            '.ci-color-picker-wrap .color-picker-tile--light.focus{box-shadow:inset 0 0 0 1px rgba(0,0,0,.42),0 0 0 2px rgba(10,20,30,.95),0 0 0 4px rgba(77,208,225,.95),0 .2em .55em rgba(0,0,0,.35)!important}' +
+            '.ci-color-picker-wrap .color-picker-tile.ci-picker-selected{box-shadow:inset 0 0 0 1px rgba(255,255,255,.5),0 0 0 2px rgba(255,255,255,.95),0 0 0 5px rgba(38,198,218,.9),0 .15em .5em rgba(0,0,0,.4)!important}' +
+            '.ci-color-picker-wrap .color-picker-tile--light.ci-picker-selected{box-shadow:inset 0 0 0 1px rgba(0,0,0,.4),0 0 0 2px rgba(20,30,40,.92),0 0 0 5px rgba(38,198,218,.92),0 .15em .5em rgba(0,0,0,.3)!important}' +
+            '.buttons-plugin-scope .full-start-new__buttons.icons-only .full-start__button span{display:none}' +
+            '.buttons-plugin-scope .full-start-new__buttons.always-text .full-start__button span{display:block!important}' +
+            '.viewmode-switch{background:rgba(255,255,255,.05);color:#fff;margin:0!important;border-radius:.7em;border:1px solid rgba(255,255,255,.08);width:100%;max-width:100%;box-sizing:border-box}' +
+            '.viewmode-switch.focus{border-color:#fff!important;background:rgba(255,255,255,.1)}' +
+            '.menu-edit-list__toolbar-stack .viewmode-switch{height:3.2em!important;min-height:3.2em!important;max-height:3.2em!important;overflow:hidden;gap:0;padding:0 1em!important;flex-direction:row!important}' +
+            '.folder-reset-button .menu-edit-list__icon,.folder-create-confirm .menu-edit-list__icon,.name-picker-ok .menu-edit-list__icon{width:1.5em;min-width:1.5em;height:1.5em;display:flex;align-items:center;justify-content:center;flex-shrink:0}' +
+            '.folder-reset-button .menu-edit-list__icon svg,.folder-create-confirm .menu-edit-list__icon svg,.name-picker-ok .menu-edit-list__icon svg{width:1.35em;height:1.35em;display:block}' +
+            '.folder-reset-button .menu-edit-list__toolbar-label,.folder-create-confirm .menu-edit-list__toolbar-label{text-align:center;white-space:normal;word-break:break-word;line-height:1.25;min-width:0;flex:1}' +
+            '.menu-edit-list__item-hidden{opacity:.5}' +
+            '.icon-picker-default{display:flex;align-items:center;gap:.5em;padding:0 1em;margin-bottom:.55em;border-radius:.7em;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);box-sizing:border-box;font-family:inherit;font-size:inherit}' +
+            '.buttons-plugin-icon-picker .icon-picker-default{height:3.2em;min-height:3.2em;max-height:3.2em;overflow:hidden}' +
+            '.icon-picker-default.focus{border-color:#fff!important;background:rgba(255,255,255,.1)}' +
+            '.icon-picker-default__preview{width:2.2em;height:2.2em;min-width:2.2em;display:flex;align-items:center;justify-content:center;flex-shrink:0}' +
+            '.icon-picker-default__preview svg{width:1.4em;height:1.4em}' +
+            '.buttons-plugin-icon-picker.icon-picker-wrap{min-width:22em;width:100%;min-height:11em;box-sizing:border-box;padding-right:1em;overflow:visible}' +
+            '.icon-picker-wrap{width:100%;display:grid;grid-template-columns:repeat(auto-fill,minmax(2.5em,1fr));gap:.35em;align-content:start;padding:0 .35em;overflow:visible}' +
+            '.icon-picker-wrap .icon-picker-default,.icon-picker-wrap .icon-picker-switch-wrap,.icon-picker-wrap .icon-picker-load-status{grid-column:1/-1}' +
+            '.icon-picker-view-lampa .icon-picker-cell-alt{display:none!important}' +
+            '.icon-picker-view-alt .icon-picker-cell-lampa{display:none!important}' +
+            '.icon-picker-switch-wrap{display:flex;width:100%;align-items:stretch;gap:.7em;margin-bottom:.2em}' +
+            '.icon-picker-tab{flex:1;display:flex;align-items:center;justify-content:center;padding:0 .65em;border-radius:.7em;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);text-align:center;min-width:0;box-sizing:border-box;font-family:inherit;font-size:inherit;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:pointer;user-select:none}' +
+            '.buttons-plugin-icon-picker .icon-picker-tab{height:3.2em;min-height:3.2em;max-height:3.2em}' +
+            '.icon-picker-tab--active{background:rgba(66,133,244,.55);border-color:rgba(255,255,255,.15)}' +
+            '.icon-picker-tab.focus{border-color:#fff!important;background:rgba(255,255,255,.1)}' +
+            '.icon-picker-load-status{font-size:inherit;font-weight:normal;color:rgba(255,255,255,.7);margin-top:.2em;font-family:inherit;min-height:1.2em}' +
+            '.icon-picker-grid__cell{display:flex;align-items:center;justify-content:center;padding:.35em;min-height:2.5em;border:1px solid rgba(255,255,255,.2);border-radius:.6em;background:rgba(255,255,255,.1);box-sizing:border-box;cursor:pointer;user-select:none}' +
+            '.icon-picker-grid__cell.focus{border-color:#fff!important}' +
+            '.icon-picker-grid__cell svg{width:1.5em;height:1.5em}' +
+            '.name-picker-ok{font-family:inherit;font-size:inherit;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:0;min-height:3.2em;margin-top:.5em;border-radius:.7em;border:1px solid rgba(255,255,255,.15);background:rgba(66,133,244,.55);padding:.6em 1em;box-sizing:border-box;width:100%;max-width:100%;cursor:pointer;user-select:none}' +
+            '.name-picker-ok .menu-edit-list__create-folder-inner{min-width:0;flex:0 1 auto;max-width:100%}' +
+            '.name-picker-ok.focus{border-color:#fff!important}' +
+            '.name-picker-wrap{padding-right:1em}' +
+            'body.buttons-plugin--poster-off .full-start-new:not(.applecation) .full-start-new__body{height:80vh!important;min-height:80vh!important}' +
+            'body.buttons-plugin--poster-off .full-start-new:not(.applecation) .full-start-new__right{display:flex!important;flex-direction:column!important;justify-content:flex-end!important}' +
+            'body.buttons-plugin--poster-off .full-start-new:not(.applecation) .full-start-new__head{display:none!important}' +
+            'body.buttons-plugin--poster-off .full-start-new:not(.applecation) .full-start-new__rate-line{margin-bottom:.4em!important}' +
+            'body.buttons-plugin--poster-off .full-start-new:not(.applecation) .full-start-new__details{margin-bottom:.2em!important}' +
+            'body.buttons-plugin--poster-off .full-start:not(.applecation) .scroll__body,body.buttons-plugin--poster-off .full:not(.applecation) .scroll__body{padding-bottom:50vh!important}' +
+            'body.buttons-plugin--poster-off .full-start:not(.applecation) .scroll__body>.items-line:last-of-type,body.buttons-plugin--poster-off .full:not(.applecation) .scroll__body>.items-line:last-of-type{margin-bottom:40vh!important}' +
+            'body.buttons-plugin--poster-off .full-start:not(.applecation) [class*="description"],body.buttons-plugin--poster-off .full:not(.applecation) [class*="description"]{margin-bottom:40vh!important}' +
+            '</style>');
+        $('body').append(style);
 
-        Lampa.Listener.follow(FULL_EVENT_TYPE, function(e) {
-            if (e.type === FULL_EVENT_TYPE && e.component === 'full') {
-                setTimeout(function() {
-                    currentContainer = $('.full-start');
-                    if (currentContainer.length) {
-                        applyChanges();
+        function syncPosterOffClass() {
+            var showPoster = Lampa.Storage.get('card_interface_poster', Lampa.Storage.get('card_interfice_poster', true));
+            $('body').toggleClass('buttons-plugin--poster-off', !showPoster);
+        }
+        syncPosterOffClass();
+
+        (function bindPosterSync() {
+            var bound = false;
+            try {
+                if (Lampa.Storage && Lampa.Storage.listener && typeof Lampa.Storage.listener.follow === 'function') {
+                    Lampa.Storage.listener.follow('change', function(e) {
+                        if (!e || (e.name !== 'card_interface_poster' && e.name !== 'card_interfice_poster')) return;
+                        syncPosterOffClass();
+                    });
+                    bound = true;
+                }
+            } catch (ex) { logDebug('poster sync listener bind failed', ex); }
+            if (!bound) setInterval(syncPosterOffClass, SYNC_POSTER_INTERVAL_MS);
+        })();
+
+        Lampa.Listener.follow('full', function(e) {
+            if (e.type !== FULL_EVENT_TYPE) return;
+            syncPosterOffClass();
+            var container = e.object.activity.render();
+            var targetContainer = container.find('.full-start-new__buttons');
+            if (targetContainer.length) {
+                targetContainer.addClass('buttons-loading');
+            }
+            setTimeout(function() {
+                var tc = container.find('.full-start-new__buttons');
+                if (tc.length) tc.addClass('buttons-loading');
+            }, 0);
+            setTimeout(function() {
+                try {
+                    if (!container.data('buttons-processed')) {
+                        container.data('buttons-processed', true);
+                        if (reorderButtons(container)) {
+                            watchForLateButtons(container);
+                            if (targetContainer.length) {
+                                targetContainer.removeClass('buttons-loading');
+                            }
+                            refreshController();
+                        }
+                    } else {
+                        setTimeout(function() {
+                            if (container.data('buttons-processed')) {
+                                var newButtons = targetContainer.find('.full-start__button').not('.button--edit-order, .button--play');
+                                var hasNewButtons = false;
+                                newButtons.each(function() {
+                                    var $btn = $(this);
+                                    if (isExcluded($btn)) return;
+                                    var found = false;
+                                    for (var i = 0; i < currentButtons.length; i++) {
+                                        if (getButtonId(currentButtons[i]) === getButtonId($btn)) {
+                                            found = true;
+                                            break;
+                                        }
+                                    }
+                                    if (!found) {
+                                        hasNewButtons = true;
+                                    }
+                                });
+                                if (hasNewButtons) {
+                                    reorderButtons(container, { animate: false });
+                                }
+                                watchForLateButtons(container);
+                            }
+                        }, 600);
                     }
-                }, DELAY_FULL_CARD_READY_MS);
+                } catch(err) {
+                    if (targetContainer.length) {
+                        targetContainer.removeClass('buttons-loading');
+                    }
+                }
+            }, DELAY_FULL_CARD_READY_MS);
+        });
+    }
+
+    if (Lampa.SettingsApi) {
+        Lampa.SettingsApi.addParam({
+            component: 'interface',
+            param: { name: STORAGE_KEYS.editor_enabled, type: 'trigger', default: true },
+            field: { name: 'Редактор кнопок' },
+            onChange: function(value) {
+                setTimeout(function() {
+                    var currentValue = Lampa.Storage.get(STORAGE_KEYS.editor_enabled, true);
+                    if (currentValue) {
+                        $('.button--edit-order').show();
+                    } else {
+                        $('.button--edit-order').hide();
+                    }
+                }, DELAY_AFTER_APPLY_MS);
+            },
+            onRender: function(element) {
+                setTimeout(function() {
+                    $('div[data-name="interface_size"]').after(element);
+                }, 0);
             }
         });
     }
 
-    if (window.Lampa && Lampa.Listener) {
-        init();
-    } else {
-        document.addEventListener('DOMContentLoaded', function() {
-            if (window.Lampa && Lampa.Listener) init();
-        });
+    init();
+
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports = {};
     }
 })();
