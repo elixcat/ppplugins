@@ -7,7 +7,7 @@
     var DELAY_AFTER_APPLY_MS = 100;
     var DELAY_FULL_CARD_READY_MS = 400;
     var DELAY_ICON_PICKER_MODAL_MS = 4000;
-    var DEFAULT_ICONS_URL = 'https://amikdn.github.io/lampa-button-icons.json';
+    var DEFAULT_ICONS_URL = 'https://elixcat.github.io/ppplugins/lampa-button-icons.json';
     var SYNC_POSTER_INTERVAL_MS = 3000;
     var STORAGE_KEYS = {
         custom_order: 'button_custom_order',
