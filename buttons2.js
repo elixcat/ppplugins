@@ -164,25 +164,6 @@
         return sepIdx === -1 ? btnId : btnId.substring(0, sepIdx);
     }
 
-    function getStableButtonKey(btn) {
-        var rawId = getButtonId(btn);
-        var base = baseIdOf(rawId);
-        var map = getStableMap();
-        if (map[base]) {
-            if (rawId !== base && !map[rawId]) {
-                map[rawId] = map[base];
-                setStableMap(map);
-            }
-            return map[base];
-        }
-        var pluginKey = detectBalancerPluginKey(btn);
-        var stableKey = pluginKey ? ('plugin:' + pluginKey) : ('btn:' + base);
-        map[base] = stableKey;
-        if (rawId !== base) map[rawId] = stableKey;
-        setStableMap(map);
-        return stableKey;
-    }
-
     function detectBalancerPluginKey(btn) {
         var classes = btn.attr('class') || '';
         var text = (btn.find('span').first().text() || '').trim().toLowerCase();
@@ -225,6 +206,25 @@
         return null;
     }
 
+    function getStableButtonKey(btn) {
+        var rawId = getButtonId(btn);
+        var base = baseIdOf(rawId);
+        var map = getStableMap();
+        if (map[base]) {
+            if (rawId !== base && !map[rawId]) {
+                map[rawId] = map[base];
+                setStableMap(map);
+            }
+            return map[base];
+        }
+        var pluginKey = detectBalancerPluginKey(btn);
+        var stableKey = pluginKey ? ('plugin:' + pluginKey) : ('btn:' + base);
+        map[base] = stableKey;
+        if (rawId !== base) map[rawId] = stableKey;
+        setStableMap(map);
+        return stableKey;
+    }
+
     function getOrderKey(btn) {
         return getStableButtonKey(btn);
     }
@@ -260,6 +260,7 @@
         if (typeof MutationObserver === 'undefined' || !container || !container.length) return;
         var target = container.find('.full-start-new__buttons');
         if (!target.length || target.data('buttons-late-observer')) return;
+
         var refreshTimer = null;
         var observer = new MutationObserver(function(mutations) {
             var hasUnknownButton = false;
@@ -282,6 +283,7 @@
                 }
             }
             if (!hasUnknownButton) return;
+
             clearTimeout(refreshTimer);
             var animationUntil = container.data('buttons-animation-until') || 0;
             var refreshDelay = Math.max(50, animationUntil - Date.now() + 30);
@@ -290,6 +292,7 @@
                 reconcileLateButtons(container);
             }, refreshDelay);
         });
+
         observer.observe(target[0], { childList: true, subtree: true });
         target.data('buttons-late-observer', observer);
     }
@@ -480,11 +483,14 @@
                     var er = target.getBoundingClientRect();
                     var vr = viewportEl.getBoundingClientRect();
                     if (!er.height || !vr.height) return;
+
                     if (er.bottom > vr.bottom - EDGE_SCROLL_PAD) {
                         scroll.wheel(er.bottom - vr.bottom + EDGE_SCROLL_PAD);
+
                     } else if (er.top < vr.top + EDGE_SCROLL_PAD) {
                         scroll.wheel(er.top - vr.top - EDGE_SCROLL_PAD);
                     }
+
                 } catch (e) {
                     logDebug('edgeScroll.update', e);
                 }
@@ -852,15 +858,20 @@
 
     function sanitizeSvgMarkup(raw) {
         if (!raw || typeof raw !== 'string') return '';
+
         var match = raw.match(/<svg[\s\S]*?<\s*\/\s*svg\s*>/i);
         var svg = match ? match[0] : '';
         if (!svg) return '';
+
         svg = svg.replace(/<\s*script[\s\S]*?<\s*\/\s*script\s*>/gi, '');
         svg = svg.replace(/<\s*script\b[^>]*>/gi, '');
+
         svg = svg.replace(/<\s*foreignObject[\s\S]*?<\s*\/\s*foreignObject\s*>/gi, '');
+
         svg = svg.replace(/\son[a-z0-9_-]+\s*=\s*"[^"]*"/gi, '');
         svg = svg.replace(/\son[a-z0-9_-]+\s*=\s*'[^']*'/gi, '');
         svg = svg.replace(/\son[a-z0-9_-]+\s*=\s*[^\s>]+/gi, '');
+
         svg = svg.replace(/(href|xlink:href|src)\s*=\s*"\s*javascript:[^"]*"/gi, '$1="#"');
         svg = svg.replace(/(href|xlink:href|src)\s*=\s*'\s*javascript:[^']*'/gi, "$1='#'");
         return svg;
@@ -984,6 +995,7 @@
             originalCallback(null, 'Введіть посилання на файл');
             return;
         }
+
         var settled = false;
         function callback(res, err) {
             if (settled) return;
@@ -1019,6 +1031,7 @@
                 try {
                     arr = JSON.parse(text.replace(/[\u0000-\u001F]+/g, ' '));
                 } catch (e2) {
+
                     var svgList = text.match(/<svg[\s\S]*?<\s*\/\s*svg\s*>/gi);
                     if (svgList && svgList.length > 0) {
                         arr = svgList;
@@ -1288,6 +1301,7 @@
     function assignButtonIds($buttons) {
         if (!$buttons || !$buttons.length) return;
         var counts = {};
+
         $buttons.each(function() {
             var existing = this.getAttribute ? this.getAttribute(BM_ID_ATTR) : null;
             if (!existing) return;
@@ -1300,6 +1314,7 @@
             }
             if (!counts[base] || n > counts[base]) counts[base] = n;
         });
+
         $buttons.each(function() {
             if (this.getAttribute && this.getAttribute(BM_ID_ATTR)) return;
             var base = baseButtonId($(this));
@@ -1348,6 +1363,7 @@
 
     function categorizeButtons(container) {
         var allButtons = container.find('.full-start__button').not('.button--edit-order, .button--folder, .button--play');
+
         assignButtonIds(allButtons);
         var categories = { online: [], torrent: [], trailer: [], favorite: [], subscribe: [], book: [], reaction: [], other: [] };
         var processedIds = {};
@@ -1626,13 +1642,16 @@
         var targetContainer = currentContainer.find('.full-start-new__buttons');
         if (!targetContainer.length) return;
         targetContainer.find('.full-start__button').not('.button--edit-order').detach();
+
         var visibleButtons = layoutButtons(targetContainer, currentButtons, folders, buttonsInFolders, {
             guardButtonsInFolders: true
         });
+
         applyHiddenButtons(currentButtons);
         applyCustomLabels(currentButtons);
         applyIconsAndColorsToButtons(visibleButtons);
         applyButtonAnimation(visibleButtons, false);
+
         if (Lampa.Storage.get(STORAGE_KEYS.editor_enabled) !== false) {
             var editBtn = targetContainer.find('.button--edit-order');
             if (!editBtn.length) {
@@ -2059,141 +2078,74 @@
         focusModalController();
     }
 
+    function addSettingsComponent() {
+        var settingsApi = Lampa.SettingsApi || Lampa.Settings;
+        if (!settingsApi || typeof settingsApi.addComponent !== 'function') {
+            setTimeout(addSettingsComponent, 500);
+            return;
+        }
+        var manifest = {};
+        try {
+            manifest = Lampa.Manifest && Lampa.Manifest.plugins && Lampa.Manifest.plugins.buttons ? Lampa.Manifest.plugins.buttons : {};
+        } catch (e) { logDebug('addSettingsComponent manifest', e); }
+
+        var componentName = 'buttons_plugin';
+        var componentTitle = 'Кнопки';
+
+        settingsApi.addComponent({
+            component: componentName,
+            name: componentTitle,
+            icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="10" rx="2"/><circle cx="7" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="17" cy="12" r="1"/></svg>'
+        });
+
+        settingsApi.addParam({
+            component: componentName,
+            param: {
+                name: 'editor_enabled',
+                type: 'trigger',
+                default: true
+            },
+            field: {
+                name: 'Редактор кнопок',
+                description: 'Показувати кнопку редагування порядку біля кнопок балансерів'
+            },
+            onChange: function(value) {
+                Lampa.Storage.set(STORAGE_KEYS.editor_enabled, value);
+                if (currentContainer && currentContainer.length) {
+                    var target = currentContainer.find('.full-start-new__buttons');
+                    if (value === false) {
+                        target.find('.button--edit-order').remove();
+                    } else {
+                        applyChanges();
+                    }
+                }
+            }
+        });
+
+        settingsApi.addParam({
+            component: componentName,
+            param: {
+                name: 'reset_button_order',
+                type: 'button',
+                default: ''
+            },
+            field: {
+                name: 'Скинути порядок кнопок',
+                description: 'Очистити збережений порядок кнопок'
+            },
+            onChange: function() {
+                setCustomOrder([]);
+                setItemOrder([]);
+                Lampa.Storage.set(STORAGE_KEYS.stable_map, {});
+                if (currentContainer && currentContainer.length) applyChanges();
+                Lampa.Noty.show('Порядок кнопок скинуто');
+            }
+        });
+    }
+
     function init() {
         Lampa.Storage.set(STORAGE_KEYS.plugin_version, PLUGIN_VERSION);
-        if (Lampa.SettingsApi && typeof Lampa.SettingsApi.addComponent === 'function') {
-            Lampa.SettingsApi.addComponent({
-                component: 'buttons',
-                name: 'Кнопки',
-                icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="10" rx="2"/><line x1="7" y1="12" x2="7" y2="12"/><line x1="12" y1="12" x2="12" y2="12"/><line x1="17" y1="12" x2="17" y2="12"/></svg>'
-            });
-            Lampa.SettingsApi.addParam({
-                component: 'buttons',
-                param: {
-                    name: 'editor_enabled',
-                    type: 'trigger',
-                    default: true
-                },
-                field: {
-                    name: 'Редактор кнопок',
-                    description: 'Показувати кнопку редагування на картці фільму'
-                },
-                onChange: function(value) {
-                    Lampa.Storage.set(STORAGE_KEYS.editor_enabled, value);
-                    if (currentContainer) applyChanges();
-                }
-            });
-            Lampa.SettingsApi.addParam({
-                component: 'buttons',
-                param: {
-                    name: 'open_editor',
-                    type: 'button',
-                    default: ''
-                },
-                field: {
-                    name: 'Відкрити редактор',
-                    description: 'Відкрити редактор кнопок зараз'
-                },
-                onChange: function() {
-                    if (currentContainer) {
-                        openEditDialog();
-                    } else {
-                        Lampa.Noty.show('Спочатку відкрийте картку фільму');
-                    }
-                }
-            });
-            Lampa.SettingsApi.addParam({
-                component: 'buttons',
-                param: {
-                    name: 'reset_order',
-                    type: 'button',
-                    default: ''
-                },
-                field: {
-                    name: 'Скинути порядок',
-                    description: 'Скинути користувацький порядок кнопок'
-                },
-                onChange: function() {
-                    setCustomOrder([]);
-                    setItemOrder([]);
-                    setHiddenButtons([]);
-                    setCustomLabels({});
-                    setCustomIcons({});
-                    setPerButtonIconColors({});
-                    setGlobalIconColor('');
-                    setFolders([]);
-                    Lampa.Storage.set(STORAGE_KEYS.stable_map, {});
-                    if (currentContainer) applyChanges();
-                    Lampa.Noty.show('Порядок скинуто');
-                }
-            });
-        } else if (Lampa.Settings && typeof Lampa.Settings.addComponent === 'function') {
-            Lampa.Settings.addComponent({
-                component: 'buttons',
-                name: 'Кнопки',
-                icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="10" rx="2"/><line x1="7" y1="12" x2="7" y2="12"/><line x1="12" y1="12" x2="12" y2="12"/><line x1="17" y1="12" x2="17" y2="12"/></svg>'
-            });
-            Lampa.Settings.addParam({
-                component: 'buttons',
-                param: {
-                    name: 'editor_enabled',
-                    type: 'trigger',
-                    default: true
-                },
-                field: {
-                    name: 'Редактор кнопок',
-                    description: 'Показувати кнопку редагування на картці фільму'
-                },
-                onChange: function(value) {
-                    Lampa.Storage.set(STORAGE_KEYS.editor_enabled, value);
-                    if (currentContainer) applyChanges();
-                }
-            });
-            Lampa.Settings.addParam({
-                component: 'buttons',
-                param: {
-                    name: 'open_editor',
-                    type: 'button',
-                    default: ''
-                },
-                field: {
-                    name: 'Відкрити редактор',
-                    description: 'Відкрити редактор кнопок зараз'
-                },
-                onChange: function() {
-                    if (currentContainer) {
-                        openEditDialog();
-                    } else {
-                        Lampa.Noty.show('Спочатку відкрийте картку фільму');
-                    }
-                }
-            });
-            Lampa.Settings.addParam({
-                component: 'buttons',
-                param: {
-                    name: 'reset_order',
-                    type: 'button',
-                    default: ''
-                },
-                field: {
-                    name: 'Скинути порядок',
-                    description: 'Скинути користувацький порядок кнопок'
-                },
-                onChange: function() {
-                    setCustomOrder([]);
-                    setItemOrder([]);
-                    setHiddenButtons([]);
-                    setCustomLabels({});
-                    setCustomIcons({});
-                    setPerButtonIconColors({});
-                    setGlobalIconColor('');
-                    setFolders([]);
-                    Lampa.Storage.set(STORAGE_KEYS.stable_map, {});
-                    if (currentContainer) applyChanges();
-                    Lampa.Noty.show('Порядок скинуто');
-                }
-            });
-        }
+        addSettingsComponent();
 
         Lampa.Listener.follow(FULL_EVENT_TYPE, function(e) {
             if (e.type === FULL_EVENT_TYPE && e.component === 'full') {
@@ -2208,7 +2160,16 @@
     }
 
     if (window.Lampa && Lampa.Listener) {
-        init();
+        if (Lampa.Manifest && Lampa.Manifest.app_digital >= 100) {
+            init();
+        } else {
+            Lampa.Listener.follow('app', function(e) {
+                if (e.type === 'ready') init();
+            });
+            setTimeout(function() {
+                if (!Lampa.Storage.get(STORAGE_KEYS.plugin_version)) init();
+            }, 1000);
+        }
     } else {
         document.addEventListener('DOMContentLoaded', function() {
             if (window.Lampa && Lampa.Listener) init();
