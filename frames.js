@@ -1,15 +1,9 @@
-/**
- * Lampa Frames Plugin (Кадры и скриншоты из фильмов, сериалов, аниме, мультфильмов и дорам)
- * High-performance widescreen frames carousel & full-screen gallery viewer
- * Compatible with TMDB, CUB, KP and ADrama cards.
- */
 (function () {
     'use strict';
 
     if (window.plugin_lampa_frames_installed) return;
     window.plugin_lampa_frames_installed = true;
 
-    // Safe Navigator helper for SpatialNavigator in Lampa
     var Nav = {
         canmove: function (dir) {
             var n = window.Navigator || (typeof Navigator !== 'undefined' ? Navigator : null);
@@ -25,7 +19,6 @@
         }
     };
 
-    // --- 1. IN-MEMORY LRU CACHE (Optimized for WebOS TV RAM) ---
     var Cache = {
         data: {},
         keys: [],
@@ -33,7 +26,6 @@
 
         get: function (key) {
             if (this.data[key]) {
-                // Refresh position in LRU
                 var idx = this.keys.indexOf(key);
                 if (idx >= 0) {
                     this.keys.splice(idx, 1);
@@ -54,7 +46,6 @@
         }
     };
 
-    // --- 2. FULLSCREEN FRAME VIEWER ---
     var FrameViewer = {
         active: false,
         frames: [],
@@ -63,6 +54,8 @@
         html: null,
         prevController: null,
         lastFocusedElem: null,
+        touchStartX: 0,
+        touchStartY: 0,
 
         open: function (frames, startIndex, title, lastElem) {
             if (!frames || !frames.length) return;
@@ -102,12 +95,35 @@
                         '</svg>' +
                     '</div>' +
                     '<div class="frames-viewer__footer">' +
-                        '<span>Стрелки Влево / Вправо для переключения · Нажмите [Назад] для выхода</span>' +
+                        '<span>Свайпніть або стрілки вліво / вправо для перемикання · Натисніть [Назад] для виходу</span>' +
                     '</div>' +
                 '</div>'
             );
 
             $('body').append(this.html);
+
+            this.html.on('touchstart', function (e) {
+                if (e.originalEvent.touches && e.originalEvent.touches.length === 1) {
+                    _this.touchStartX = e.originalEvent.touches[0].clientX;
+                    _this.touchStartY = e.originalEvent.touches[0].clientY;
+                }
+            });
+
+            this.html.on('touchend', function (e) {
+                if (!e.originalEvent.changedTouches || e.originalEvent.changedTouches.length !== 1) return;
+                var endX = e.originalEvent.changedTouches[0].clientX;
+                var endY = e.originalEvent.changedTouches[0].clientY;
+                var diffX = endX - _this.touchStartX;
+                var diffY = endY - _this.touchStartY;
+
+                if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY)) {
+                    if (diffX > 0) {
+                        _this.prev();
+                    } else {
+                        _this.next();
+                    }
+                }
+            });
 
             this.showFrame(this.index);
 
@@ -152,7 +168,7 @@
 
             var pre = new Image();
             pre.onload = function () {
-                if (_this.active && _this.index === _this.index) {
+                if (_this.active) {
                     imgElem.attr('src', imgUrl);
                     imgElem.css('opacity', '1');
                     loader.addClass('hide');
@@ -167,7 +183,6 @@
             };
             pre.src = imgUrl;
 
-            // Preload adjacent images only (saving bandwidth & TV RAM)
             var nextItem = this.frames[(this.index + 1) % this.frames.length];
             var prevItem = this.frames[(this.index - 1 + this.frames.length) % this.frames.length];
             if (nextItem) { var n = new Image(); n.src = nextItem.original || nextItem.thumb; }
@@ -201,16 +216,13 @@
         }
     };
 
-    // --- 3. DATA FETCHERS ---
-
-    // Fetch frames from TMDB (for movies, TV series, cartoons, anime)
     function fetchTmdbFrames(type, id, onResult) {
         var cacheKey = 'tmdb_' + type + '_' + id;
         var cached = Cache.get(cacheKey);
         if (cached) return onResult(cached);
 
         var limit = parseInt(Lampa.Storage.get('frames_limit', '24'), 10) || 24;
-        var quality = Lampa.Storage.get('frames_quality', 'w780'); // w780 or w500
+        var quality = Lampa.Storage.get('frames_quality', 'w780');
 
         var u = type + '/' + id + '/images?api_key=' + Lampa.TMDB.key();
         var url = Lampa.TMDB.api(u);
@@ -224,7 +236,6 @@
                 var backdrops = (res && res.backdrops) ? res.backdrops : [];
                 if (!backdrops.length && res && res.stills) backdrops = res.stills;
 
-                // Sort by vote_count descending or aspect ratio
                 var sorted = backdrops.slice().sort(function (a, b) {
                     return (b.vote_count || 0) - (a.vote_count || 0);
                 });
@@ -253,7 +264,6 @@
         });
     }
 
-    // Fetch frames from ADrama
     function fetchAdramaFrames(releaseData, onResult) {
         var id = (releaseData.summary && releaseData.summary.id) || releaseData.id;
         var cacheKey = 'adrama_' + id;
@@ -277,7 +287,6 @@
             }
         }
 
-        // If ADrama has no gallery stills, fallback to TMDB search
         if (!frames.length) {
             var sum = releaseData.summary || {};
             var titleEn = (sum.titles && sum.titles.en) || '';
@@ -298,7 +307,6 @@
         onResult(frames);
     }
 
-    // Fallback search in TMDB by title & year
     function searchTmdbFallback(query, year, onResult) {
         var u = 'search/multi?api_key=' + Lampa.TMDB.key() + '&query=' + encodeURIComponent(query);
         if (year) u += '&year=' + encodeURIComponent(year);
@@ -325,14 +333,13 @@
         });
     }
 
-    // --- 4. CAROUSEL LINE BUILDER ---
     function buildFramesLine(frames, title, targetScroll, onFocus) {
         if (!frames || !frames.length) return null;
 
         var line = $(
             '<div class="items-line layer--visible layer--render items-line--frames">' +
                 '<div class="items-line__head">' +
-                    '<div class="items-line__title">Кадры <span class="items-line__count">(' + frames.length + ')</span></div>' +
+                    '<div class="items-line__title">Кадри <span class="items-line__count">(' + frames.length + ')</span></div>' +
                 '</div>' +
                 '<div class="items-line__body"></div>' +
             '</div>'
@@ -385,7 +392,6 @@
         return { line: line, lineScroll: lineScroll };
     }
 
-    // Wrap frames line into a full-fledged Lampa 2.0 component item for Spatial Navigation
     function createFramesItem(comp, line, lineScroll) {
         var item = {
             html: line[0],
@@ -456,14 +462,38 @@
         return item;
     }
 
-    // --- 5. INITIALIZATION & HOOKS ---
     function init() {
-        // Inject Stylesheet
         if (!$('link[href*="frames.css"]').length) {
-            $('head').append('<style id="frames-styles">' + "/* Lampa Frames Plugin Styles (\u041a\u0430\u0434\u0440\u044b \u0438 \u0441\u043a\u0440\u0438\u043d\u0448\u043e\u0442\u044b) */\n\n.items-line--frames {\n    position: relative;\n    margin-bottom: 1.5em;\n}\n\n.items-cards--frames {\n    display: -webkit-box !important;\n    display: -webkit-flex !important;\n    display: flex !important;\n    -webkit-flex-direction: row !important;\n    flex-direction: row !important;\n    -webkit-flex-wrap: nowrap !important;\n    flex-wrap: nowrap !important;\n    -webkit-box-align: start !important;\n    -webkit-align-items: flex-start !important;\n    align-items: flex-start !important;\n    padding: 0.8em 1.5em 1.4em 1.5em !important;\n}\n\n.items-cards--frames .card--frame {\n    -webkit-flex-shrink: 0 !important;\n    flex-shrink: 0 !important;\n    width: 20em !important;\n    margin-right: 1.2em !important;\n    cursor: pointer;\n}\n\n.card--frame .card__view {\n    padding-bottom: 56.25% !important; /* 16:9 widescreen */\n    position: relative !important;\n    -webkit-border-radius: 0.8em !important;\n    border-radius: 0.8em !important;\n    background: #141416 !important;\n    transition: transform 0.2s ease, box-shadow 0.2s ease !important;\n}\n\n.card--frame .card__img {\n    position: absolute !important;\n    top: 0 !important;\n    left: 0 !important;\n    width: 100% !important;\n    height: 100% !important;\n    object-fit: cover !important;\n    -webkit-border-radius: 0.8em !important;\n    border-radius: 0.8em !important;\n    transition: transform 0.25s ease, opacity 0.3s ease !important;\n    opacity: 0;\n}\n\n.card--frame .card__img.loaded {\n    opacity: 1 !important;\n}\n\n.card--frame.focus .card__view {\n    outline: none !important;\n}\n\n.card--frame.focus .card__view::after {\n    content: \"\" !important;\n    position: absolute !important;\n    top: -0.4em !important;\n    left: -0.4em !important;\n    right: -0.4em !important;\n    bottom: -0.4em !important;\n    border: 0.3em solid #fff !important;\n    -webkit-border-radius: 1.2em !important;\n    border-radius: 1.2em !important;\n    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85) !important;\n    z-index: 5 !important;\n    pointer-events: none !important;\n    -webkit-animation: animation-card-focus 0.2s ease !important;\n    animation: animation-card-focus 0.2s ease !important;\n}\n\n.card--frame.hover .card__view::after {\n    border-color: rgba(255, 255, 255, 0.5) !important;\n}\n\n.card--frame.focus .card__img {\n    transform: scale(1.02) !important;\n}\n\n.card--frame .frame__number {\n    position: absolute;\n    bottom: 0.5em;\n    right: 0.6em;\n    padding: 0.15em 0.5em;\n    background: rgba(0, 0, 0, 0.65);\n    border-radius: 0.3em;\n    font-size: 0.8em;\n    font-weight: 600;\n    color: #fff;\n    pointer-events: none;\n    z-index: 2;\n}\n\n.items-line__count {\n    font-size: 0.75em;\n    color: rgba(255, 255, 255, 0.5);\n    font-weight: 400;\n    margin-left: 0.4em;\n}\n\n/* Fullscreen Frame Viewer */\n.frames-viewer {\n    position: fixed;\n    top: 0;\n    left: 0;\n    width: 100vw;\n    height: 100vh;\n    background: rgba(0, 0, 0, 0.94);\n    z-index: 10000;\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex;\n    -webkit-flex-direction: column;\n    flex-direction: column;\n    -webkit-box-pack: center;\n    -webkit-justify-content: center;\n    justify-content: center;\n    -webkit-box-align: center;\n    -webkit-align-items: center;\n    align-items: center;\n    user-select: none;\n    -webkit-user-select: none;\n    animation: frames-fade-in 0.2s ease-out;\n}\n\n@keyframes frames-fade-in {\n    from { opacity: 0; }\n    to { opacity: 1; }\n}\n\n.frames-viewer__head {\n    position: absolute;\n    top: 2em;\n    left: 3.5em;\n    right: 3.5em;\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex;\n    -webkit-box-pack: justify;\n    -webkit-justify-content: space-between;\n    justify-content: space-between;\n    -webkit-box-align: center;\n    -webkit-align-items: center;\n    align-items: center;\n    z-index: 2;\n}\n\n.frames-viewer__title {\n    font-size: 1.6em;\n    font-weight: 700;\n    color: #fff;\n    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9);\n    max-width: 75vw;\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n}\n\n.frames-viewer__counter {\n    font-size: 1.3em;\n    color: rgba(255, 255, 255, 0.8);\n    font-weight: 600;\n    background: rgba(255, 255, 255, 0.12);\n    padding: 0.2em 0.8em;\n    border-radius: 0.4em;\n}\n\n.frames-viewer__body {\n    position: relative;\n    width: 90vw;\n    height: 80vh;\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex;\n    -webkit-box-pack: center;\n    -webkit-justify-content: center;\n    justify-content: center;\n    -webkit-box-align: center;\n    -webkit-align-items: center;\n    align-items: center;\n}\n\n.frames-viewer__img {\n    max-width: 100%;\n    max-height: 100%;\n    object-fit: contain;\n    border-radius: 0.6em;\n    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.85);\n    transition: opacity 0.2s ease;\n}\n\n.frames-viewer__arrow {\n    position: absolute;\n    top: 50%;\n    transform: translateY(-50%);\n    -webkit-transform: translateY(-50%);\n    width: 3.8em;\n    height: 3.8em;\n    display: -webkit-box;\n    display: -webkit-flex;\n    display: flex;\n    -webkit-box-align: center;\n    -webkit-align-items: center;\n    align-items: center;\n    -webkit-box-pack: center;\n    -webkit-justify-content: center;\n    justify-content: center;\n    color: rgba(255, 255, 255, 0.7);\n    background: rgba(0, 0, 0, 0.5);\n    border: 1px solid rgba(255, 255, 255, 0.15);\n    -webkit-border-radius: 50%;\n    border-radius: 50%;\n    z-index: 10;\n    pointer-events: none;\n    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);\n    transition: opacity 0.2s ease, background 0.2s ease, transform 0.2s ease;\n}\n\n.frames-viewer__arrow svg {\n    width: 2.2em;\n    height: 2.2em;\n    display: block;\n}\n\n.frames-viewer__arrow--left {\n    left: 2em;\n}\n\n.frames-viewer__arrow--right {\n    right: 2em;\n}\n\n.frames-viewer__footer {\n    position: absolute;\n    bottom: 2em;\n    color: rgba(255, 255, 255, 0.5);\n    font-size: 1.05em;\n    text-align: center;\n    z-index: 2;\n}\n\n.frames-viewer__loader {\n    position: absolute;\n    width: 3.5em;\n    height: 3.5em;\n    border: 4px solid rgba(255, 255, 255, 0.2);\n    border-top-color: #fff;\n    border-radius: 50%;\n    animation: frames-spin 0.8s linear infinite;\n    z-index: 3;\n}\n\n@keyframes frames-spin {\n    to { transform: rotate(360deg); }\n}\n" + '</style>');
+            $('head').append('<style id="frames-styles">' +
+'.items-line--frames{position:relative;margin-bottom:1.5em}' +
+'.items-cards--frames{display:-webkit-box!important;display:-webkit-flex!important;display:flex!important;-webkit-flex-direction:row!important;flex-direction:row!important;-webkit-flex-wrap:nowrap!important;flex-wrap:nowrap!important;-webkit-box-align:start!important;-webkit-align-items:flex-start!important;align-items:flex-start!important;padding:0.8em 1.5em 1.4em 1.5em!important}' +
+'.items-cards--frames .card--frame{-webkit-flex-shrink:0!important;flex-shrink:0!important;width:20em!important;margin-right:1.2em!important;cursor:pointer}' +
+'.card--frame .card__view{padding-bottom:56.25%!important;position:relative!important;-webkit-border-radius:0.8em!important;border-radius:0.8em!important;background:#141416!important;transition:transform 0.2s ease,box-shadow 0.2s ease!important}' +
+'.card--frame .card__img{position:absolute!important;top:0!important;left:0!important;width:100%!important;height:100%!important;object-fit:cover!important;-webkit-border-radius:0.8em!important;border-radius:0.8em!important;transition:transform 0.25s ease,opacity 0.3s ease!important;opacity:0}' +
+'.card--frame .card__img.loaded{opacity:1!important}' +
+'.card--frame.focus .card__view{outline:none!important}' +
+'.card--frame.focus .card__view::after{content:""!important;position:absolute!important;top:-0.4em!important;left:-0.4em!important;right:-0.4em!important;bottom:-0.4em!important;border:0.3em solid #fff!important;-webkit-border-radius:1.2em!important;border-radius:1.2em!important;box-shadow:0 8px 24px rgba(0,0,0,0.85)!important;z-index:5!important;pointer-events:none!important;-webkit-animation:animation-card-focus 0.2s ease!important;animation:animation-card-focus 0.2s ease!important}' +
+'.card--frame.hover .card__view::after{border-color:rgba(255,255,255,0.5)!important}' +
+'.card--frame.focus .card__img{transform:scale(1.02)!important}' +
+'.card--frame .frame__number{position:absolute;bottom:0.5em;right:0.6em;padding:0.15em 0.5em;background:rgba(0,0,0,0.65);border-radius:0.3em;font-size:0.8em;font-weight:600;color:#fff;pointer-events:none;z-index:2}' +
+'.items-line__count{font-size:0.75em;color:rgba(255,255,255,0.5);font-weight:400;margin-left:0.4em}' +
+'.frames-viewer{position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.94);z-index:10000;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-box-pack:center;-webkit-justify-content:center;justify-content:center;-webkit-box-align:center;-webkit-align-items:center;align-items:center;user-select:none;-webkit-user-select:none;animation:frames-fade-in 0.2s ease-out}' +
+'@keyframes frames-fade-in{from{opacity:0}to{opacity:1}}' +
+'.frames-viewer__head{position:absolute;top:2em;left:3.5em;right:3.5em;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-pack:justify;-webkit-justify-content:space-between;justify-content:space-between;-webkit-box-align:center;-webkit-align-items:center;align-items:center;z-index:2}' +
+'.frames-viewer__title{font-size:1.6em;font-weight:700;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,0.9);max-width:75vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+'.frames-viewer__counter{font-size:1.3em;color:rgba(255,255,255,0.8);font-weight:600;background:rgba(255,255,255,0.12);padding:0.2em 0.8em;border-radius:0.4em}' +
+'.frames-viewer__body{position:relative;width:90vw;height:80vh;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-pack:center;-webkit-justify-content:center;justify-content:center;-webkit-box-align:center;-webkit-align-items:center;align-items:center}' +
+'.frames-viewer__img{max-width:100%;max-height:100%;object-fit:contain;border-radius:0.6em;box-shadow:0 10px 40px rgba(0,0,0,0.85);transition:opacity 0.2s ease}' +
+'.frames-viewer__arrow{position:absolute;top:50%;transform:translateY(-50%);-webkit-transform:translateY(-50%);width:3.8em;height:3.8em;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;justify-content:center;color:rgba(255,255,255,0.7);background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.15);-webkit-border-radius:50%;border-radius:50%;z-index:10;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,0.6);transition:opacity 0.2s ease,background 0.2s ease,transform 0.2s ease}' +
+'.frames-viewer__arrow svg{width:2.2em;height:2.2em;display:block}' +
+'.frames-viewer__arrow--left{left:2em}' +
+'.frames-viewer__arrow--right{right:2em}' +
+'.frames-viewer__footer{position:absolute;bottom:2em;color:rgba(255,255,255,0.5);font-size:1.05em;text-align:center;z-index:2}' +
+'.frames-viewer__loader{position:absolute;width:3.5em;height:3.5em;border:4px solid rgba(255,255,255,0.2);border-top-color:#fff;border-radius:50%;animation:frames-spin 0.8s linear infinite;z-index:3}' +
+'@keyframes frames-spin{to{transform:rotate(360deg)}}' +
+'</style>');
         }
 
-        // Hook 1: Standard Lampa cards (TMDB / CUB / Movies / TV / Anime / Cartoons)
         Lampa.Listener.follow('full', function (e) {
             if (e.type !== 'complite' || !Lampa.Storage.get('frames_enable', true)) return;
 
@@ -476,12 +506,11 @@
             var scroll = comp.scroll;
             if (!scroll) return;
 
-            // Avoid duplicate injections
             if (scroll.render().find('.items-line--frames').length) return;
 
             var isTV = (e.object && e.object.method === 'tv') || Boolean(movie.number_of_seasons !== undefined || movie.first_air_date);
             var type = isTV ? 'tv' : 'movie';
-            var title = movie.title || movie.name || 'Фильм';
+            var title = movie.title || movie.name || 'Фільм';
 
             fetchTmdbFrames(type, movie.id, function (frames) {
                 if (!frames || !frames.length) return;
@@ -502,7 +531,6 @@
                     item.emit('active');
                 });
 
-                // Materialize un-materialized rows if lazy loading hasn't created them yet
                 if (comp.rows && comp.items && comp.items.length < comp.rows.length) {
                     var add = comp.rows.slice(comp.items.length);
                     comp.fragment = document.createDocumentFragment();
@@ -510,7 +538,6 @@
                     comp.scroll.append(comp.fragment);
                 }
 
-                // Determine insert position (insert before recommendations / similar)
                 var insertIdx = -1;
                 if (comp.items && comp.items.length) {
                     for (var i = 0; i < comp.items.length; i++) {
@@ -552,12 +579,10 @@
             });
         });
 
-        // Hook 2: ADrama cards
         Lampa.Listener.follow('adrama_card', function (e) {
             if (e.type !== 'complite' || !Lampa.Storage.get('frames_enable', true)) return;
             if (!e.release || !e.scroll) return;
 
-            // Avoid duplicate injections
             if (e.scroll.render().find('.items-line--frames').length) return;
 
             var sum = e.release.summary || {};
@@ -582,7 +607,6 @@
                     e.scroll.append(line);
                 }
 
-                // Register all frame selectors in Navigator collection for spatial navigation!
                 Lampa.Controller.collectionAppend(line.find('.selector'));
 
                 if (Lampa.Layer && Lampa.Layer.update) Lampa.Layer.update();
@@ -590,11 +614,10 @@
             });
         });
 
-        // Settings Section
         if (Lampa.SettingsApi) {
             Lampa.SettingsApi.addComponent({
                 component: 'frames_settings',
-                name: 'Кадры и скриншоты',
+                name: 'Кадри та скріншоти',
                 icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>'
             });
 
@@ -606,8 +629,8 @@
                     default: true
                 },
                 field: {
-                    name: 'Показывать кадры',
-                    description: 'Отображать блок кадров в карточках фильмов, сериалов, мультфильмов и дорам'
+                    name: 'Показувати кадри',
+                    description: 'Відображати блок кадрів у картках фільмів, серіалів, мультфільмів та дорам'
                 }
             });
 
@@ -619,8 +642,8 @@
                     default: true
                 },
                 field: {
-                    name: 'Фон при наведении',
-                    description: 'Изменять фоновое изображение экрана при наведении на кадр'
+                    name: 'Фон при наведенні',
+                    description: 'Змінювати фонове зображення екрана при наведенні на кадр'
                 }
             });
 
@@ -630,15 +653,15 @@
                     name: 'frames_limit',
                     type: 'select',
                     values: {
-                        '12': '12 кадров (быстро)',
-                        '24': '24 кадра (рекомендуется)',
-                        '36': '36 кадров (максимум)'
+                        '12': '12 кадрів (швидко)',
+                        '24': '24 кадри (рекомендовано)',
+                        '36': '36 кадрів (максимум)'
                     },
                     default: '24'
                 },
                 field: {
-                    name: 'Количество кадров',
-                    description: 'Ограничение количества загружаемых кадров для оптимальной производительности'
+                    name: 'Кількість кадрів',
+                    description: 'Обмеження кількості завантажуваних кадрів для оптимальної продуктивності'
                 }
             });
 
@@ -648,14 +671,14 @@
                     name: 'frames_quality',
                     type: 'select',
                     values: {
-                        'w500': 'Среднее (w500)',
-                        'w780': 'Высокое (w780, четко)'
+                        'w500': 'Середнє (w500)',
+                        'w780': 'Високе (w780, чітко)'
                     },
                     default: 'w780'
                 },
                 field: {
-                    name: 'Качество миниатюр',
-                    description: 'Разрешение загружаемых превью в строке (полный размер открывается по нажатию)'
+                    name: 'Якість мініатюр',
+                    description: 'Роздільність завантажуваних прев’ю в рядку (повний розмір відкривається натисканням)'
                 }
             });
         }
