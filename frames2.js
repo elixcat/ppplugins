@@ -9,9 +9,10 @@
     version: '1.4.0',
     name: 'Frames',
     description: 'Кадри та скріншоти з фільмів, серіалів, аніме, мультфільмів і дорам',
-    author: '@elixcat',
+    author: 'DeepSeek 🌚',
     component: 'lampa_frames'
 };
+    Lampa.Manifest.plugins = manifest;
 
     Lampa.Lang.add({
         frames_title: {
