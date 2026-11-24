@@ -5,15 +5,42 @@
     window.plugin_lampa_frames_installed = true;
 
     var manifest = {
-        type: 'video',
+        type: 'other',
         version: '1.4.0',
         name: 'Frames',
         description: 'Кадри та скріншоти з фільмів, серіалів, аніме, мультфільмів і дорам',
-        author: '@elixcat',
+        author: 'DeepSeek 🌚',
         component: 'lampa_frames'
     };
 
     Lampa.Manifest.plugins = manifest;
+
+    function updatePluginMeta() {
+        if (!window.Lampa || !Lampa.Plugins || !Lampa.Plugins.get) return;
+        try {
+            var plugins = Lampa.Plugins.get();
+            var changed = false;
+            for (var i = 0; i < plugins.length; i++) {
+                var plugin = plugins[i];
+                var url = String(plugin && plugin.url || '');
+                if (/\/frames(?:\.v\d+)?\.js(?:[?#].*)?$/i.test(url)) {
+                    if (plugin.name !== manifest.name) {
+                        plugin.name = manifest.name;
+                        changed = true;
+                    }
+                    if (plugin.descr !== manifest.description) {
+                        plugin.descr = manifest.description;
+                        changed = true;
+                    }
+                    if (plugin.author !== manifest.author) {
+                        plugin.author = manifest.author;
+                        changed = true;
+                    }
+                }
+            }
+            if (changed && Lampa.Plugins.save) Lampa.Plugins.save();
+        } catch (e) {}
+    }
 
     Lampa.Lang.add({
         frames_title: {
@@ -568,6 +595,10 @@
     }
 
     function init() {
+        updatePluginMeta();
+        setTimeout(updatePluginMeta, 1000);
+        setTimeout(updatePluginMeta, 3000);
+
         if (!$('link[href*="frames.css"]').length && !$('#frames-styles').length) {
             $('head').append('<style id="frames-styles">' +
 '.items-line--frames{position:relative;margin-bottom:1.5em}' +
