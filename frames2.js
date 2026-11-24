@@ -5,7 +5,7 @@
     window.plugin_lampa_frames_installed = true;
 
     var manifest = {
-        type: 'other',
+        type: 'video',
         version: '1.4.0',
         name: 'Frames',
         description: 'Кадри та скріншоти з фільмів, серіалів, аніме, мультфільмів і дорам',
