@@ -4,14 +4,15 @@
     if (window.plugin_lampa_frames_installed) return;
     window.plugin_lampa_frames_installed = true;
 
-    Lampa.Manifest.plugins = {
-    type: 'other',
-    version: '1.4.0',
-    name: 'Frames',
-    description: 'Кадри та скріншоти з фільмів, серіалів, аніме, мультфільмів і дорам',
-    author: 'DeepSeek 🌚',
-    component: 'lampa_frames'
-};
+    var manifest = {
+        type: 'other',
+        version: '1.4.0',
+        name: 'Frames',
+        description: 'Кадри та скріншоти з фільмів, серіалів, аніме, мультфільмів і дорам',
+        author: '@elixcat',
+        component: 'lampa_frames'
+    };
+
     Lampa.Manifest.plugins = manifest;
 
     Lampa.Lang.add({
