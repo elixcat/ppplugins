@@ -15,25 +15,47 @@
 
     Lampa.Manifest.plugins = manifest;
 
+    function getCurrentLang() {
+        try {
+            return Lampa.Storage.get('language', 'uk') || 'uk';
+        } catch (e) {
+            return 'uk';
+        }
+    }
+
+    function getLocalizedMeta() {
+        var lang = getCurrentLang();
+        var name = Lampa.Lang.translate('frames_settings_title');
+        var descr = Lampa.Lang.translate('frames_enable_descr');
+        if (!name || name === 'frames_settings_title') {
+            name = (lang === 'en') ? 'Frames & Screenshots' : (lang === 'ru') ? 'Кадры и скриншоты' : (lang === 'be') ? 'Кадры і скрыншоты' : 'Кадри та скріншоти';
+        }
+        if (!descr || descr === 'frames_enable_descr') {
+            descr = (lang === 'en') ? 'Display frames block on movie, series, cartoon and drama cards' : (lang === 'ru') ? 'Отображать блок кадров в карточках фильмов, сериалов, мультфильмов и дорам' : (lang === 'be') ? 'Адлюстроўваць блок кадраў у картках фільмаў, серыялаў, мультфільмаў і дорам' : 'Відображати блок кадрів у картках фільмів, серіалів, мультфільмів та дорам';
+        }
+        return { name: name, descr: descr, author: manifest.author };
+    }
+
     function updatePluginMeta() {
         if (!window.Lampa || !Lampa.Plugins || !Lampa.Plugins.get) return;
         try {
             var plugins = Lampa.Plugins.get();
+            var meta = getLocalizedMeta();
             var changed = false;
             for (var i = 0; i < plugins.length; i++) {
                 var plugin = plugins[i];
                 var url = String(plugin && plugin.url || '');
-                if (/\/frames2(?:\.v\d+)?\.js(?:[?#].*)?$/i.test(url)) {
-                    if (plugin.name !== manifest.name) {
-                        plugin.name = manifest.name;
+                if (/\/frames(?:\.v\d+)?\.js(?:[?#].*)?$/i.test(url)) {
+                    if (plugin.name !== meta.name) {
+                        plugin.name = meta.name;
                         changed = true;
                     }
-                    if (plugin.descr !== manifest.description) {
-                        plugin.descr = manifest.description;
+                    if (plugin.descr !== meta.descr) {
+                        plugin.descr = meta.descr;
                         changed = true;
                     }
-                    if (plugin.author !== manifest.author) {
-                        plugin.author = manifest.author;
+                    if (plugin.author !== meta.author) {
+                        plugin.author = meta.author;
                         changed = true;
                     }
                 }
@@ -598,6 +620,30 @@
         updatePluginMeta();
         setTimeout(updatePluginMeta, 1000);
         setTimeout(updatePluginMeta, 3000);
+
+        if (Lampa.Listener && Lampa.Listener.follow) {
+            Lampa.Listener.follow('settings', function (e) {
+                if (e && e.type === 'change' && e.name === 'language') {
+                    updatePluginMeta();
+                    setTimeout(updatePluginMeta, 500);
+                }
+            });
+            Lampa.Listener.follow('language', function () {
+                updatePluginMeta();
+                setTimeout(updatePluginMeta, 500);
+            });
+        }
+
+        if (Lampa.Storage && Lampa.Storage.listener && Lampa.Storage.listener.follow) {
+            try {
+                Lampa.Storage.listener.follow('change', function (e) {
+                    if (e && e.name === 'language') {
+                        updatePluginMeta();
+                        setTimeout(updatePluginMeta, 500);
+                    }
+                });
+            } catch (err) {}
+        }
 
         if (!$('link[href*="frames.css"]').length && !$('#frames-styles').length) {
             $('head').append('<style id="frames-styles">' +
