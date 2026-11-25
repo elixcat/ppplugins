@@ -31,14 +31,12 @@
         name = (lang === 'en') ? 'Frames & Screenshots'
              : (lang === 'ru') ? 'Кадры и скриншоты'
              : (lang === 'be') ? 'Кадры і скрыншоты'
-             : (lang === 'kk' || lang === 'kz') ? 'Кадрлар және скриншоттар'
              : 'Кадри та скріншоти';
     }
     if (!descr || descr === 'frames_enable_descr') {
         descr = (lang === 'en') ? 'Display frames block on movie, series, cartoon and drama cards'
               : (lang === 'ru') ? 'Отображать блок кадров в карточках фильмов, сериалов, мультфильмов и дорам'
               : (lang === 'be') ? 'Адлюстроўваць блок кадраў у картках фільмаў, серыялаў, мультфільмаў і дорам'
-              : (lang === 'kk' || lang === 'kz') ? 'Фильм, сериал, мультфильм және дорама карточкаларында кадрлар блогын көрсету'
               : 'Відображати блок кадрів у картках фільмів, серіалів, мультфільмів та дорам';
     }
     return { name: name, descr: descr, author: manifest.author };
@@ -53,7 +51,7 @@
             for (var i = 0; i < plugins.length; i++) {
                 var plugin = plugins[i];
                 var url = String(plugin && plugin.url || '');
-                if (/\/frames(?:\.v\d+)?\.js(?:[?#].*)?$/i.test(url)) {
+                if (/\/frames2(?:\.v\d+)?\.js(?:[?#].*)?$/i.test(url)) {
                     if (plugin.name !== meta.name) {
                         plugin.name = meta.name;
                         changed = true;
