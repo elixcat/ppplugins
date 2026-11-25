@@ -8,8 +8,8 @@
         type: 'other',
         version: '1.4.0',
         name: 'Frames',
-        description: 'Кадри та скріншоти з фільмів, серіалів, аніме, мультфільмів і дорам',
-        author: '@elixcat',
+        description: 'Кадри та скріншоти з фільмів, серіалів, аніме, мультфільмів і дорам (full screen)',
+        author: '@AI DeepSeek 🌚',
         component: 'lampa_frames'
     };
 
@@ -34,10 +34,10 @@
                  : 'Кадри та скріншоти';
         }
         if (!descr || descr === 'frames_plugin_descr') {
-            descr = (lang === 'en') ? 'Frames and screenshots from movies, series, anime, cartoons and dramas'
-                  : (lang === 'ru') ? 'Кадры и скриншоты из фильмов, сериалов, аниме, мультфильмов и дорам'
-                  : (lang === 'be') ? 'Кадры і скрыншоты з фільмаў, серыялаў, анімэ, мультфільмаў і дорам'
-                  : 'Кадри та скріншоти з фільмів, серіалів, аніме, мультфільмів і дорам';
+            descr = (lang === 'en') ? 'Frames and screenshots from movies, series, anime, cartoons and dramas (full screen)'
+                  : (lang === 'ru') ? 'Кадры и скриншоты из фильмов, сериалов, аниме, мультфильмов и дорам (full screen)'
+                  : (lang === 'be') ? 'Кадры і скрыншоты з фільмаў, серыялаў, анімэ, мультфільмаў і дорам (full screen)'
+                  : 'Кадри та скріншоти з фільмів, серіалів, аніме, мультфільмів і дорам (full screen)';
         }
         return { name: name, descr: descr, author: manifest.author };
     }
@@ -51,7 +51,7 @@
             for (var i = 0; i < plugins.length; i++) {
                 var plugin = plugins[i];
                 var url = String(plugin && plugin.url || '');
-                if (/\/frames(?:\.v\d+)?\.js(?:[?#].*)?$/i.test(url)) {
+                if (/\/frames-full(?:\.v\d+)?\.js(?:[?#].*)?$/i.test(url)) {
                     if (plugin.name !== meta.name) {
                         plugin.name = meta.name;
                         changed = true;
@@ -84,10 +84,10 @@
             be: 'Кадры і скрыншоты'
         },
         frames_plugin_descr: {
-            uk: 'Кадри та скріншоти з фільмів, серіалів, аніме, мультфільмів і дорам',
-            ru: 'Кадры и скриншоты из фильмов, сериалов, аниме, мультфильмов и дорам',
-            en: 'Frames and screenshots from movies, series, anime, cartoons and dramas',
-            be: 'Кадры і скрыншоты з фільмаў, серыялаў, анімэ, мультфільмаў і дорам'
+            uk: 'Кадри та скріншоти з фільмів, серіалів, аніме, мультфільмів і дорам (full screen)',
+            ru: 'Кадры и скриншоты из фильмов, сериалов, аниме, мультфильмов и дорам (full screen)',
+            en: 'Frames and screenshots from movies, series, anime, cartoons and dramas (full screen)',
+            be: 'Кадры і скрыншоты з фільмаў, серыялаў, анімэ, мультфільмаў і дорам (full screen)'
         },
         frames_enable: {
             uk: 'Показувати кадри',
@@ -167,12 +167,6 @@
             en: 'High (w780, sharp)',
             be: 'Высокае (w780, выразна)'
         },
-        frames_viewer_hint: {
-            uk: 'Свайпніть або стрілки вліво / вправо для перемикання · Натисніть [Назад] для виходу',
-            ru: 'Свайпните или стрелки Влево / Вправо для переключения · Нажмите [Назад] для выхода',
-            en: 'Swipe or use Left / Right arrows to switch · Press [Back] to exit',
-            be: 'Свайпніце або стрэлкі ўлева / ўправа для пераключэння · Націсніце [Назад] для выхаду'
-        },
         frames_fallback_movie: {
             uk: 'Фільм',
             ru: 'Фильм',
@@ -227,16 +221,6 @@
         }
     };
 
-    function isTouchControl() {
-        try {
-            var c = Lampa.Storage.get('control', '');
-            if (c === 'touch') return true;
-            var n = Lampa.Storage.get('navigation', '');
-            if (n === 'touch') return true;
-        } catch (e) {}
-        return false;
-    }
-
     var FrameViewer = {
         active: false,
         frames: [],
@@ -265,10 +249,8 @@
 
             if (this.html) this.html.remove();
 
-            var touchMode = isTouchControl();
-
             this.html = $(
-                '<div class="frames-viewer' + (touchMode ? ' frames-viewer--touch' : '') + '">' +
+                '<div class="frames-viewer">' +
                     '<div class="frames-viewer__img-wrap">' +
                         '<div class="frames-viewer__loader hide"></div>' +
                         '<img class="frames-viewer__img" />' +
@@ -276,19 +258,6 @@
                     '<div class="frames-viewer__head">' +
                         '<div class="frames-viewer__title">' + this.title + '</div>' +
                         '<div class="frames-viewer__counter">' + (this.index + 1) + ' / ' + this.frames.length + '</div>' +
-                    '</div>' +
-                    '<div class="frames-viewer__arrow frames-viewer__arrow--left">' +
-                        '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">' +
-                            '<polyline points="15 18 9 12 15 6"></polyline>' +
-                        '</svg>' +
-                    '</div>' +
-                    '<div class="frames-viewer__arrow frames-viewer__arrow--right">' +
-                        '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">' +
-                            '<polyline points="9 18 15 12 9 6"></polyline>' +
-                        '</svg>' +
-                    '</div>' +
-                    '<div class="frames-viewer__footer">' +
-                        '<span>' + Lampa.Lang.translate('frames_viewer_hint') + '</span>' +
                     '</div>' +
                 '</div>'
             );
@@ -684,15 +653,8 @@
 '.frames-viewer__img-wrap{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:1}' +
 '.frames-viewer__img{max-width:100%;max-height:100%;object-fit:contain;transition:opacity 0.2s ease}' +
 '.frames-viewer__head{position:absolute;top:2em;left:3.5em;right:3.5em;display:flex;justify-content:space-between;align-items:center;z-index:3;pointer-events:none;background:transparent}' +
-'.frames-viewer__title{font-size:1.6em;font-weight:700;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,0.9);max-width:60vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:rgba(255,255,255,0.12);padding:0.2em 0.8em;border-radius:0.4em}' +
-'.frames-viewer__counter{font-size:1.3em;color:rgba(255,255,255,0.8);font-weight:600;background:rgba(255,255,255,0.12);padding:0.2em 0.8em;border-radius:0.4em;text-shadow:0 2px 10px rgba(0,0,0,0.9)}' +
-'.frames-viewer__arrow{position:absolute;top:50%;transform:translateY(-50%);width:3.8em;height:3.8em;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.7);background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.15);border-radius:50%;z-index:10;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,0.6)}' +
-'.frames-viewer__arrow svg{width:2.2em;height:2.2em;display:block}' +
-'.frames-viewer__arrow--left{left:2em}' +
-'.frames-viewer__arrow--right{right:2em}' +
-'.frames-viewer__footer{position:absolute;bottom:2em;left:0;right:0;color:rgba(255,255,255,0.5);font-size:1.05em;text-align:center;z-index:3;pointer-events:none}' +
-'.frames-viewer--touch .frames-viewer__arrow,' +
-'.frames-viewer--touch .frames-viewer__footer{display:none!important}' +
+'.frames-viewer__title{font-size:1.6em;font-weight:700;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,0.9);max-width:60vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:#151515;padding:0.2em 0.8em;border-radius:0.4em}' +
+'.frames-viewer__counter{font-size:1.3em;color:rgba(255,255,255,0.8);font-weight:600;background:#151515;padding:0.2em 0.8em;border-radius:0.4em;text-shadow:0 2px 10px rgba(0,0,0,0.9)}' +
 '.frames-viewer__loader{position:absolute;width:3.5em;height:3.5em;border:4px solid rgba(255,255,255,0.2);border-top-color:#fff;border-radius:50%;animation:frames-spin 0.8s linear infinite;z-index:2}' +
 '@keyframes frames-spin{to{transform:rotate(360deg)}}' +
 '</style>');
