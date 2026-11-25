@@ -51,7 +51,7 @@
             for (var i = 0; i < plugins.length; i++) {
                 var plugin = plugins[i];
                 var url = String(plugin && plugin.url || '');
-                if (/\/frames2(?:\.v\d+)?\.js(?:[?#].*)?$/i.test(url)) {
+                if (/\/frames(?:\.v\d+)?\.js(?:[?#].*)?$/i.test(url)) {
                     if (plugin.name !== meta.name) {
                         plugin.name = meta.name;
                         changed = true;
