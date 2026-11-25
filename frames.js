@@ -9,7 +9,7 @@
         version: '1.4.0',
         name: 'Frames',
         description: 'Кадри та скріншоти з фільмів, серіалів, аніме, мультфільмів і дорам',
-        author: 'DeepSeek 🌚',
+        author: 'AI DeepSeek 🌚',
         component: 'lampa_frames'
     };
 
@@ -24,23 +24,23 @@
     }
 
     function getLocalizedMeta() {
-    var lang = getCurrentLang();
-    var name = Lampa.Lang.translate('frames_settings_title');
-    var descr = Lampa.Lang.translate('frames_enable_descr');
-    if (!name || name === 'frames_settings_title') {
-        name = (lang === 'en') ? 'Frames & Screenshots'
-             : (lang === 'ru') ? 'Кадры и скриншоты'
-             : (lang === 'be') ? 'Кадры і скрыншоты'
-             : 'Кадри та скріншоти';
+        var lang = getCurrentLang();
+        var name = Lampa.Lang.translate('frames_settings_title');
+        var descr = Lampa.Lang.translate('frames_plugin_descr');
+        if (!name || name === 'frames_settings_title') {
+            name = (lang === 'en') ? 'Frames & Screenshots'
+                 : (lang === 'ru') ? 'Кадры и скриншоты'
+                 : (lang === 'be') ? 'Кадры і скрыншоты'
+                 : 'Кадри та скріншоти';
+        }
+        if (!descr || descr === 'frames_plugin_descr') {
+            descr = (lang === 'en') ? 'Frames and screenshots from movies, series, anime, cartoons and dramas'
+                  : (lang === 'ru') ? 'Кадры и скриншоты из фильмов, сериалов, аниме, мультфильмов и дорам'
+                  : (lang === 'be') ? 'Кадры і скрыншоты з фільмаў, серыялаў, анімэ, мультфільмаў і дорам'
+                  : 'Кадри та скріншоти з фільмів, серіалів, аніме, мультфільмів і дорам';
+        }
+        return { name: name, descr: descr, author: manifest.author };
     }
-    if (!descr || descr === 'frames_enable_descr') {
-        descr = (lang === 'en') ? 'Display frames block on movie, series, cartoon and drama cards'
-              : (lang === 'ru') ? 'Отображать блок кадров в карточках фильмов, сериалов, мультфильмов и дорам'
-              : (lang === 'be') ? 'Адлюстроўваць блок кадраў у картках фільмаў, серыялаў, мультфільмаў і дорам'
-              : 'Відображати блок кадрів у картках фільмів, серіалів, мультфільмів та дорам';
-    }
-    return { name: name, descr: descr, author: manifest.author };
-}
 
     function updatePluginMeta() {
         if (!window.Lampa || !Lampa.Plugins || !Lampa.Plugins.get) return;
@@ -82,6 +82,12 @@
             ru: 'Кадры и скриншоты',
             en: 'Frames & Screenshots',
             be: 'Кадры і скрыншоты'
+        },
+        frames_plugin_descr: {
+            uk: 'Кадри та скріншоти з фільмів, серіалів, аніме, мультфільмів і дорам',
+            ru: 'Кадры и скриншоты из фильмов, сериалов, аниме, мультфильмов и дорам',
+            en: 'Frames and screenshots from movies, series, anime, cartoons and dramas',
+            be: 'Кадры і скрыншоты з фільмаў, серыялаў, анімэ, мультфільмаў і дорам'
         },
         frames_enable: {
             uk: 'Показувати кадри',
@@ -633,10 +639,6 @@
                     updatePluginMeta();
                     setTimeout(updatePluginMeta, 500);
                 }
-            });
-            Lampa.Listener.follow('language', function () {
-                updatePluginMeta();
-                setTimeout(updatePluginMeta, 500);
             });
         }
 
