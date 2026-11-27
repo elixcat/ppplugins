@@ -4,13 +4,14 @@
     if (window.hide_meta_mood_ready) return;
     window.hide_meta_mood_ready = true;
 
-    var TITLES = ['метаданные', 'настроения'];
+    var TITLES = ['метаданные', 'настроения', 'метадані', 'настрої'];
     var HIDDEN = 'hmm-hidden';
     var timer = null;
     var direction = 'down';
     var skips = 0;
     var pending = null;
     var calls = 0;
+    var noteTimer = null;
 
     function text(el) {
         return (el.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
@@ -31,11 +32,17 @@
         for (var i = 0; i < items.length; i++) items[i].classList.remove('selector');
     }
 
-    // ищем блок, к которому относится заголовок
-    function process(title) {
-        var line = title.closest('.items-line');
-        if (line) return hide(line);
+    // только собственный текст элемента, без значков и вложенных элементов
+    function ownText(el) {
+        var out = '';
+        for (var i = 0; i < el.childNodes.length; i++) {
+            if (el.childNodes[i].nodeType === 3) out += el.childNodes[i].nodeValue;
+        }
+        return out.toLowerCase().replace(/[^a-zа-яёіїє]/g, '');
+    }
 
+    // ищем блок, к которому относится заголовок: сам заголовок и то, что под ним
+    function process(title) {
         var node = title;
         // поднимаемся, пока внутри нет ничего, кроме заголовка
         while (node.parentElement && text(node.parentElement) === text(title)) {
@@ -43,25 +50,43 @@
         }
 
         var parent = node.parentElement;
-        if (!parent) return;
-
-        // общий контейнер только этого блока: заголовок + содержимое
-        if (parent.firstElementChild === node && parent.children.length === 2) return hide(parent);
-
-        // иначе прячем заголовок и следующий за ним элемент
         var next = node.nextElementSibling;
+
+        // под заголовком ничего нет: данные могли ещё не загрузиться
+        if (!parent || !next) return;
+
         hide(node);
-        if (next) hide(next);
+        hide(next);
+
+        if (!node.classList.contains(HIDDEN)) return;
+
+        // если в контейнере не осталось ничего видимого, прячем и его
+        for (var i = 0; i < parent.children.length; i++) {
+            if (!parent.children[i].classList.contains(HIDDEN)) return notify();
+        }
+        hide(parent);
+        notify();
+    }
+
+    function message(str) {
+        if (window.Lampa && Lampa.Noty) Lampa.Noty.show(str);
+    }
+
+    function notify() {
+        clearTimeout(noteTimer);
+        noteTimer = setTimeout(function () {
+            message('Скрытие v2: блок найден и скрыт');
+        }, 500);
     }
 
     function scan() {
         timer = null;
-        var all = document.querySelectorAll('.activity div, .activity span');
+        var all = document.body.getElementsByTagName('*');
 
         for (var i = 0; i < all.length; i++) {
             var el = all[i];
-            if (el.children.length || el.closest('.' + HIDDEN)) continue;
-            if (TITLES.indexOf(text(el)) !== -1) process(el);
+            if (TITLES.indexOf(ownText(el)) === -1) continue;
+            if (!el.closest('.' + HIDDEN)) process(el);
         }
     }
 
@@ -141,6 +166,11 @@
         });
 
         scan();
+
+        // чтобы было видно, что Lampa вообще загрузила плагин
+        setTimeout(function () {
+            message('Скрытие v2: плагин загружен');
+        }, 4000);
     }
 
     if (document.body) start();
