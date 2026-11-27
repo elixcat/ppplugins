@@ -4,7 +4,7 @@
     if (window.hide_meta_mood_ready) return;
     window.hide_meta_mood_ready = true;
 
-    var TITLES = ['метаданные', 'настроения', 'метадані', 'настрої'];
+    var TITLES = ['метаданные', 'настроения'];
     var HIDDEN = 'hmm-hidden';
     var timer = null;
     var direction = 'down';
