@@ -13,6 +13,13 @@
         });
     }
 
+    // прячем колесо загрузки в центре экрана (при переходе по вкладкам и разделам)
+    function hideLoader() {
+        var style = document.createElement('style');
+        style.textContent = '.activity__loader { display: none !important; }';
+        document.head.appendChild(style);
+    }
+
     // ========== ЧАСТИНА 2: Приховування елементів "немає історії перегляду" ==========
     var TEXTS = [
         'немає історії перегляду',
@@ -124,5 +131,6 @@
         else setTimeout(wait, 200);
     }
 
+    hideLoader();
     wait();
 })();
