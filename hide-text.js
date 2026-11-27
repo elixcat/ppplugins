@@ -1,6 +1,19 @@
 (function () {
     'use strict';
 
+    if (window.hide_meta_mood_ready) return;
+    window.hide_meta_mood_ready = true;
+
+    // ========== ЧАСТИНА 1: Приховування рядів "Метаданные" та "Настроения" ==========
+    function startMeta() {
+        // Событие приходит до того, как Lampa собирает ряды карточки.
+        // Убираем данные, и ряды «Метаданные» и «Настроения» не создаются.
+        Lampa.Listener.follow('full', function (e) {
+            if (e.type === 'start' && e.data) delete e.data.metadata;
+        });
+    }
+
+    // ========== ЧАСТИНА 2: Приховування елементів "немає історії перегляду" ==========
     var TEXTS = [
         'немає історії перегляду',
         'нет истории просмотра'
@@ -89,7 +102,7 @@
         if (hidden) refreshController();
     });
 
-    function start() {
+    function startHide() {
         if (checkTree(document.body)) refreshController();
         observer.observe(document.body, {
             childList: true,
@@ -97,12 +110,19 @@
         });
     }
 
-    if (window.appready) start();
-    else if (window.Lampa && Lampa.Listener) {
-        Lampa.Listener.follow('app', function (e) {
-            if (e.type === 'ready') start();
-        });
-    } else {
-        document.addEventListener('DOMContentLoaded', start);
+    // ========== ІНІЦІАЛІЗАЦІЯ ==========
+    function start() {
+        // Частина 1 — підписка на 'full'
+        if (window.Lampa && Lampa.Listener) startMeta();
+
+        // Частина 2 — запуск спостерігача
+        startHide();
     }
+
+    function wait() {
+        if (window.Lampa && Lampa.Listener) start();
+        else setTimeout(wait, 200);
+    }
+
+    wait();
 })();
