@@ -25,15 +25,15 @@
 
     function startPlugin() {
         // ==========================================
-        // 2. МАНІФЕСТ
+        // 2. МАНІФЕСТ (ЗМІНЕНО КОМПОНЕНТ)
         // ==========================================
         var manifest = {
             type: 'other',
-            version: '1.0.1', 
+            version: '1.0.0',
             name: Lampa.Lang.translate('name_plugin'),
             description: Lampa.Lang.translate('plugin_description'),
             author: '@elixcat 🌚',
-            component: 'head_filter_v2', // Залишаємо v2, щоб не скидати налаштування
+            component: 'head_filter_v2', // <--- НОВА НАЗВА, щоб уникнути конфліктів
         };
         Lampa.Manifest.plugins = manifest;
 
@@ -57,62 +57,19 @@
         };
 
         // ==========================================
-        // 4. ЛОГІКА ПРИХОВУВАННЯ (ГІБРИДНА)
+        // 4. ЛОГІКА (З ВИКОРИСТАННЯМ JQUERY)
         // ==========================================
-        
-        // Функція для перевірки та застосування видимості до конкретного елемента
-        function checkAndApply(element) {
-            Object.keys(head).forEach(function(key) {
-                if (element.matches(head[key].element)) {
-                    var show = Lampa.Storage.get(key, true);
-                    if (!show) {
-                        // Ховаємо жорстко через style, щоб уникнути анімацій jQuery
-                        element.style.setProperty('display', 'none', 'important');
-                    } else {
-                        element.style.display = ''; 
-                    }
-                }
-            });
-        }
-
-        // Загальна функція для оновлення всіх елементів (для налаштувань)
         function applyVisibility() {
             Object.keys(head).forEach(function(key) {
-                var show = Lampa.Storage.get(key, true);
-                var el = document.querySelector(head[key].element);
-                if (el) {
-                    if (show) {
-                        el.style.display = '';
-                    } else {
-                        el.style.setProperty('display', 'none', 'important');
-                    }
+                var show_element = Lampa.Storage.get(key, true); 
+                // Повертаємось до jQuery, як в оригіналі
+                if (show_element) {
+                    $(head[key].element).show();
+                } else {
+                    $(head[key].element).hide();
                 }
             });
         }
-
-        // Налаштовуємо MutationObserver, який буде ловити появу кнопок
-        var observer = new MutationObserver(function(mutations) {
-            mutations.forEach(function(mutation) {
-                if (mutation.addedNodes.length) {
-                    mutation.addedNodes.forEach(function(node) {
-                        if (node.nodeType === 1) { // Якщо це HTML-елемент
-                            // Перевіряємо сам вузол
-                            checkAndApply(node);
-                            // Перевіряємо його нащадків (якщо додався цілий блок шапки)
-                            if (node.querySelectorAll) {
-                                node.querySelectorAll('.head__action, .head__time, .notice--icon').forEach(checkAndApply);
-                            }
-                        }
-                    });
-                }
-            });
-        });
-
-        // Починаємо стежити за DOM відразу
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
 
         // ==========================================
         // 5. СЛУХАЧІ ПОДІЙ
@@ -128,14 +85,15 @@
         // Слухаємо зміну активності (перехід між сторінками)
         Lampa.Storage.listener.follow('change', function(event) {
             if (event.name == 'activity') {
-                // Запускаємо перевірку з невеликою затримкою, 
-                // але MutationObserver вже має зловити нові елементи
-                setTimeout(applyVisibility, 100);
+                // Робимо кілька спроб з різною затримкою, щоб наздогнати перемальовку
+                setTimeout(applyVisibility, 50);
+                setTimeout(applyVisibility, 300);
+                setTimeout(applyVisibility, 800); 
             }
         });
 
         // ==========================================
-        // 6. ІНТЕРФЕЙС НАЛАШТУВАНЬ (Без змін)
+        // 6. ІНТЕРФЕЙС НАЛАШТУВАНЬ
         // ==========================================
         Lampa.Template.add('settings_head_filter_v2',`<div></div>`);
 
@@ -147,28 +105,35 @@
                 description: Lampa.Lang.translate('plugin_description')
             },
             onChange: ()=>{
-                Lampa.Settings.create('head_filter_v2',{
+                Lampa.Settings.create('head_filter_v2',{ // Вказуємо новий компонент
                     onBack: ()=>{ Lampa.Settings.create('interface') }
                 })
             }
         });   
 
         Lampa.SettingsApi.addParam({
-            component: 'head_filter_v2',
+            component: 'head_filter_v2', // Новий компонент
             param: { type: 'title' },
             field: { name: Lampa.Lang.translate('name_menu') } 
         });   
 
         Object.keys(head).forEach(function(key) {
             Lampa.SettingsApi.addParam({
-                component: 'head_filter_v2',
-                param: { name: key, type: 'trigger', default: true },
+                component: 'head_filter_v2', // Новий компонент
+                param: { 
+                    name: key, 
+                    type: 'trigger', 
+                    default: true 
+                },
                 field: { name: head[key].name }        
             });
         });
 
-        // Застосовуємо при старті
-        applyVisibility();
+        // ==========================================
+        // 7. СТАРТ
+        // ==========================================
+        // Застосовуємо налаштування при старті з невеликою затримкою
+        setTimeout(applyVisibility, 500);
     }
 
     // ==========================================
