@@ -30,7 +30,7 @@
         // ==========================================
         var manifest = {
             type: 'other',
-            version: '1.1.0',
+            version: '1.1.1',
             name: Lampa.Lang.translate('name_plugin'),
             description: Lampa.Lang.translate('plugin_description'),
             author: '@elixcat 🌚',
@@ -76,11 +76,11 @@
         // 5. СТВОРЕННЯ КНОПКИ "ЗАКЛАДКИ"
         // ==========================================
         function addBookmarksButton() {
-            // Перевіряємо, чи вже створена кнопка, щоб не дублювати
+            // Перевіряємо, чи вже створена кнопка
             if ($('.open--bookmarks').length) return;
 
-            // Створюємо кнопку зірочки. Клас 'head__action' та 'selector' робимо її схожою на інші кнопки шапки
-            var btn = $('<div class="head__action selector open--bookmarks"><svg><use xlink:href="#sprite-favorite"></use></svg></div>');
+            // Створюємо кнопку. Використовуємо іконку #sprite-bookmarks
+            var btn = $('<div class="head__action selector open--bookmarks"><svg><use xlink:href="#sprite-bookmarks"></use></svg></div>');
 
             // Додаємо обробник кліку для переходу до закладок
             btn.on('click', function() {
@@ -92,10 +92,13 @@
                 });
             });
 
-            // Вставляємо кнопку в шапку (перед кнопкою налаштувань або в кінець)
-            var $head = $('.head__actions');
-            if ($head.length) {
-                $head.prepend(btn); // Вставляємо на початок, можна змінити на append
+            // Вставляємо кнопку відразу ПІСЛЯ кнопки пошуку
+            var $search = $('.head__action.open--search');
+            if ($search.length) {
+                $search.after(btn);
+            } else {
+                // Якщо пошук чомусь не знайдено, вставляємо в загальний контейнер
+                $('.head__actions').prepend(btn);
             }
         }
 
@@ -103,17 +106,14 @@
         // 6. СЛУХАЧІ ПОДІЙ
         // ==========================================
         
-        // Слухаємо зміну налаштувань (перемикачі в меню)
         Lampa.Storage.listener.follow('change', function(event) {
             if (event.name in head) {
                 applyVisibility();
             }
         });
 
-        // Слухаємо зміну активності (перехід між сторінками)
         Lampa.Storage.listener.follow('change', function(event) {
             if (event.name == 'activity') {
-                // Додаємо кнопку та застосовуємо видимість після перемальовки шапки
                 setTimeout(function() {
                     addBookmarksButton();
                     applyVisibility();
