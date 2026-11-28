@@ -11,7 +11,7 @@
         type: 'video',
         version: '1.3.1',
         name: 'Full Desc Expander',
-        description: 'Розширює вікно опису фільму, якщо текст довгий, та прибирає затемнення',
+        description: 'Розширює вікно опису фільму, якщо текст довгий',
         author: '@elixcat 🌚',
         component: 'full_desc_expander'
     };
