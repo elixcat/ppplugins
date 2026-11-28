@@ -112,7 +112,7 @@
             version: '0.2.5', // Підняв версію для оновлення кешу
             name: Lampa.Lang.translate('name_plugin'),
             description: Lampa.Lang.translate('plugin_description'),
-			author: '@elixcat 🌚'
+			author: '@elixcat 🌚',
             component: 'head_filter',
         };
         Lampa.Manifest.plugins = manifest;
