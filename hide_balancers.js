@@ -1,4 +1,4 @@
-(function () {
+(functio () {
     'use strict';
 
     if (window.hide_balancers_v5_installed) return;
