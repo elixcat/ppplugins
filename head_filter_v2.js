@@ -24,13 +24,72 @@
         plugin_description: { ru: 'Плагин для настройки шапки (v2)', en: 'Header settings plugin (v2)', uk: 'Плагін для налаштування шапки (v2)', zh: '头部设置插件 (v2)' }
     });
 
+    // ==========================================
+    // 2. ОНОВЛЕННЯ МЕТАДАНИХ (як у Frames)
+    // ==========================================
+    function getCurrentLang() {
+        try {
+            return Lampa.Storage.get('language', 'uk') || 'uk';
+        } catch (e) {
+            return 'uk';
+        }
+    }
+
+    function getLocalizedMeta() {
+        var lang = getCurrentLang();
+        var name = Lampa.Lang.translate('name_plugin');
+        var descr = Lampa.Lang.translate('plugin_description');
+        
+        // Якщо переклад не знайдено, використовуємо fallback
+        if (!name || name === 'name_plugin') {
+            name = (lang === 'en') ? 'Header Settings'
+                 : (lang === 'ru') ? 'Настройка шапки'
+                 : 'Налаштування шапки';
+        }
+        if (!descr || descr === 'plugin_description') {
+            descr = (lang === 'en') ? 'Plugin for customizing the header'
+                  : (lang === 'ru') ? 'Плагин для настройки шапки'
+                  : 'Плагін для налаштування шапки';
+        }
+        return { name: name, descr: descr, author: '@elixcat 🌚' };
+    }
+
+    function updatePluginMeta() {
+        if (!window.Lampa || !Lampa.Plugins || !Lampa.Plugins.get) return;
+        try {
+            var plugins = Lampa.Plugins.get();
+            var meta = getLocalizedMeta();
+            var changed = false;
+            for (var i = 0; i < plugins.length; i++) {
+                var plugin = plugins[i];
+                var url = String(plugin && plugin.url || '');
+                // Шукаємо наш плагін за компонентом
+                if (plugin.component === 'head_filter_v2' || /\/head_filter_v2(?:\.v\d+)?\.js(?:[?#].*)?$/i.test(url)) {
+                    if (plugin.name !== meta.name) {
+                        plugin.name = meta.name;
+                        changed = true;
+                    }
+                    if (plugin.descr !== meta.descr) {
+                        plugin.descr = meta.descr;
+                        changed = true;
+                    }
+                    if (plugin.author !== meta.author) {
+                        plugin.author = meta.author;
+                        changed = true;
+                    }
+                }
+            }
+            if (changed && Lampa.Plugins.save) Lampa.Plugins.save();
+        } catch (e) {}
+    }
+
     function startPlugin() {
         // ==========================================
-        // 2. МАНІФЕСТ
+        // 3. МАНІФЕСТ
         // ==========================================
         var manifest = {
             type: 'other',
-            version: '1.1.1',
+            version: '1.1.2',
             name: Lampa.Lang.translate('name_plugin'),
             description: Lampa.Lang.translate('plugin_description'),
             author: '@elixcat 🌚',
@@ -39,7 +98,7 @@
         Lampa.Manifest.plugins = manifest;
 
         // ==========================================
-        // 3. СПИСОК ЕЛЕМЕНТІВ
+        // 4. СПИСОК ЕЛЕМЕНТІВ
         // ==========================================
         var head = {
             'v2_show_search': {name: Lampa.Lang.translate('search'), element: '.open--search'},
@@ -59,7 +118,7 @@
         };
 
         // ==========================================
-        // 4. ЛОГІКА (З ВИКОРИСТАННЯМ JQUERY)
+        // 5. ЛОГІКА (З ВИКОРИСТАННЯМ JQUERY)
         // ==========================================
         function applyVisibility() {
             Object.keys(head).forEach(function(key) {
@@ -73,14 +132,14 @@
         }
 
         // ==========================================
-        // 5. СТВОРЕННЯ КНОПКИ "ЗАКЛАДКИ"
+        // 6. СТВОРЕННЯ КНОПКИ "ЗАКЛАДКИ" (З ЕМОДЗІ)
         // ==========================================
         function addBookmarksButton() {
             // Перевіряємо, чи вже створена кнопка
             if ($('.open--bookmarks').length) return;
 
-            // Створюємо кнопку. Використовуємо іконку #sprite-bookmarks
-            var btn = $('<div class="head__action selector open--bookmarks"><svg><use xlink:href="#sprite-bookmarks"></use></svg></div>');
+            // Створюємо кнопку з емодзі замість SVG
+            var btn = $('<div class="head__action selector open--bookmarks" style="font-size: 1.2em; display: flex; align-items: center; justify-content: center;">⭐</div>');
 
             // Додаємо обробник кліку для переходу до закладок
             btn.on('click', function() {
@@ -97,13 +156,12 @@
             if ($search.length) {
                 $search.after(btn);
             } else {
-                // Якщо пошук чомусь не знайдено, вставляємо в загальний контейнер
                 $('.head__actions').prepend(btn);
             }
         }
 
         // ==========================================
-        // 6. СЛУХАЧІ ПОДІЙ
+        // 7. СЛУХАЧІ ПОДІЙ
         // ==========================================
         
         Lampa.Storage.listener.follow('change', function(event) {
@@ -126,7 +184,7 @@
         });
 
         // ==========================================
-        // 7. ІНТЕРФЕЙС НАЛАШТУВАНЬ
+        // 8. ІНТЕРФЕЙС НАЛАШТУВАНЬ
         // ==========================================
         Lampa.Template.add('settings_head_filter_v2',`<div></div>`);
 
@@ -163,16 +221,33 @@
         });
 
         // ==========================================
-        // 8. СТАРТ
+        // 9. СТАРТ
         // ==========================================
         setTimeout(function() {
             addBookmarksButton();
             applyVisibility();
         }, 500);
+
+        // Оновлення метаданих
+        updatePluginMeta();
+        setTimeout(updatePluginMeta, 1000);
+        setTimeout(updatePluginMeta, 3000);
+
+        // Слухаємо зміну мови для оновлення метаданих
+        if (Lampa.Storage && Lampa.Storage.listener && Lampa.Storage.listener.follow) {
+            try {
+                Lampa.Storage.listener.follow('change', function (e) {
+                    if (e && e.name === 'language') {
+                        updatePluginMeta();
+                        setTimeout(updatePluginMeta, 500);
+                    }
+                });
+            } catch (err) {}
+        }
     }
 
     // ==========================================
-    // 9. ІНІЦІАЛІЗАЦІЯ
+    // 10. ІНІЦІАЛІЗАЦІЯ
     // ==========================================
     if (window.appready) {
         startPlugin();
