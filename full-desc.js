@@ -9,43 +9,39 @@
     // ============================================================
     var manifest = {
         type: 'video',
-        version: '1.3.0',
+        version: '1.3.1',
         name: 'Full Desc Expander',
-        description: 'Розширює вікно опису фільму, якщо текст довгий',
-        author: '@elixcat',
+        description: 'Розширює вікно опису фільму, якщо текст довгий, та прибирає затемнення',
+        author: '@elixcat 🌚',
         component: 'full_desc_expander'
     };
 
     // ============================================================
-    // ЛОКАЛІЗАЦІЯ (укр, рос, біл, каз)
+    // ЛОКАЛІЗАЦІЯ (укр, рос, біл, англ)
     // ============================================================
     var LANG = {
         name: {
             uk: 'Повний опис',
             ru: 'Полное описание',
             be: 'Поўнае апісанне',
-            kk: 'Толық сипаттама',
             en: 'Full Description'
         },
         descr: {
             uk: 'Розширює вікно опису фільму, якщо текст довгий і обрізається',
             ru: 'Расширяет окно описания фильма, если текст длинный и обрезается',
             be: 'Пашырае акно апісання фільма, калі тэкст доўгі і абрэзаецца',
-            kk: 'Мәтін ұзын болса және қиылып кетсе, фильм сипаттамасының терезесін кеңейтеді',
             en: 'Expands the movie description window when the text is long and truncated'
         },
         scaleName: {
             uk: 'Масштаб опису',
             ru: 'Масштаб описания',
             be: 'Маштаб апісання',
-            kk: 'Сипаттама масштабы',
             en: 'Description Scale'
         },
         scaleDescr: {
             uk: 'Розмір тексту опису фільму',
             ru: 'Размер текста описания фильма',
             be: 'Памер тэксту апісання фільма',
-            kk: 'Фильм сипаттамасы мәтінінің өлшемі',
             en: 'Movie description text size'
         }
     };
@@ -118,7 +114,7 @@
     }
 
     // ============================================================
-    // CSS ДЛЯ РОЗШИРЕННЯ ОПИСУ
+    // CSS ДЛЯ РОЗШИРЕННЯ ОПИСУ ТА ПРИХОВУВАННЯ ЗАТЕМНЕННЯ
     // ============================================================
     function injectCSS() {
         if (document.getElementById('fde-style')) return;
@@ -149,6 +145,22 @@
             .full-start__more,
             [class*="descr"][class*="more"] {
                 display: none !important;
+            }
+
+            /* Приховуємо градієнтне затемнення (mask-image) у Lampa */
+            .full-descr__text, 
+            .full-start__desc, 
+            .full-start-new__desc {
+                -webkit-mask-image: none !important;
+                mask-image: none !important;
+            }
+            
+            /* Додатковий захист, якщо затемнення реалізовано через псевдоелемент */
+            .full-descr__text::after,
+            .full-start__desc::after,
+            .full-start-new__desc::after {
+                display: none !important;
+                content: none !important;
             }
         `;
         document.head.appendChild(style);
@@ -196,7 +208,9 @@
                 'overflow': 'visible',
                 'display': 'block',
                 '-webkit-line-clamp': 'unset',
-                'line-clamp': 'unset'
+                'line-clamp': 'unset',
+                '-webkit-mask-image': 'none', // Додатковий захист
+                'mask-image': 'none'          // Додатковий захист
             });
 
             var $parent = $el.parent();
@@ -219,7 +233,9 @@
                     'max-height': 'none',
                     'overflow': 'visible',
                     '-webkit-line-clamp': 'unset',
-                    'line-clamp': 'unset'
+                    'line-clamp': 'unset',
+                    '-webkit-mask-image': 'none',
+                    'mask-image': 'none'
                 });
             }
         });
