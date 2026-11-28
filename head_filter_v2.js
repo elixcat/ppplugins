@@ -34,7 +34,7 @@
             name: Lampa.Lang.translate('name_plugin'),
             description: Lampa.Lang.translate('plugin_description'),
             author: '@elixcat 🌚',
-            component: 'head_filter',
+            component: 'head_filter_v2',
         };
         Lampa.Manifest.plugins = manifest;
 
