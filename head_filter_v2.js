@@ -138,7 +138,7 @@ function addBookmarksButton() {
     if ($('.open--bookmarks').length) return;
 
     // ЗМІНЮЙТЕ ЦЕ ЗНАЧЕННЯ ДЛЯ ПОЗИЦІОНУВАННЯ (наприклад, -3px, -4px, 1px)
-    var icon_shift_y = '-3px'; 
+    var icon_shift_y = '-2px'; 
 
     // Створюємо кнопку. Додаємо transform: translateY для зсуву
     var btn = $('<div class="head__action selector open--bookmarks"><span style="display: flex; align-items: center; justify-content: center; width: 1em; height: 1em; font-size: 1.3em; line-height: 1; transform: translateY(' + icon_shift_y + ');">⭐</span></div>');
