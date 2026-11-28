@@ -1,58 +1,74 @@
 (function () {
     'use strict';
 
-    if (window.hide_balancers_v3_installed) return;
-    window.hide_balancers_v3_installed = true;
+    if (window.hide_balancers_v4_installed) return;
+    window.hide_balancers_v4_installed = true;
 
     var manifest = {
         type: 'other',
-        version: '1.0.2',
-        name: 'Приховування балансерів',
-        description: 'Видаляє зайві балансери з контекстного меню карток, залишаючи лише закладки',
+        version: '1.0.3',
+        name: 'Налаштування меню картки',
+        description: 'Приховує балансери, змінює заголовок "Дія" та видаляє статус',
         author: '@elixcat 🌚',
         component: 'hide_balancers'
     };
 
     Lampa.Manifest.plugins = manifest;
 
-    function hideUnwantedItems() {
-        // Шукаємо всі елементи меню
-        var items = document.querySelectorAll('.selectbox-item, .settings-param-title');
+    function processMenu() {
+        // Знаходимо всі меню на сторінці (щоб не чіпати те, що поза меню)
+        var selectboxes = document.querySelectorAll('.selectbox');
         
-        items.forEach(function(item) {
-            // 1. Залишаємо чекбокси (папки закладок)
-            if (item.classList.contains('selectbox-item--checkbox')) return;
+        selectboxes.forEach(function(menu) {
+            // --- 1. Приховування балансерів ---
+            var items = menu.querySelectorAll('.selectbox-item');
+            items.forEach(function(item) {
+                if (item.classList.contains('selectbox-item--checkbox')) return; // Залишаємо чекбокси
+                item.style.setProperty('display', 'none', 'important'); // Ховаємо балансери
+            });
 
-            // 2. Залишаємо заголовки
-            if (item.classList.contains('settings-param-title')) return;
+            // --- 2. Зміна заголовка "Дія" на "Схороняємо" ---
+            var titles = menu.querySelectorAll('.settings-param-title');
+            titles.forEach(function(title) {
+                var span = title.querySelector('span');
+                // Перевіряємо, чи це заголовок "Дія" (враховуємо можливі переклади)
+                if (span && (span.textContent.trim() === 'Дія' || span.textContent.trim() === 'Действие' || span.textContent.trim() === 'Action')) {
+                    span.textContent = 'Схороняємо 🌚';
+                }
+            });
 
-            // 3. Ховаємо все інше (балансери)
-            item.style.setProperty('display', 'none', 'important');
+            // --- 3. Приховування пункту "Статус" ---
+            // Шукаємо всі елементи всередині меню, які можуть бути цим пунктом
+            var allElements = menu.querySelectorAll('.selectbox-item, .settings-param-title');
+            allElements.forEach(function(el) {
+                var textEl = el.querySelector('.selectbox-item__title') || el.querySelector('span');
+                if (textEl && textEl.textContent.trim().toLowerCase() === 'статус') {
+                    el.style.setProperty('display', 'none', 'important');
+                }
+            });
         });
     }
 
     var observer = new MutationObserver(function (mutations) {
-        var shouldHide = false;
+        var shouldProcess = false;
         
         mutations.forEach(function (mutation) {
-            // Перевіряємо, чи додалися нові вузли
             if (mutation.addedNodes.length) {
                 mutation.addedNodes.forEach(function (node) {
-                    if (node.nodeType === 1) { // Якщо це елемент
-                        // Якщо додався контейнер меню або сам пункт
+                    if (node.nodeType === 1) { 
                         if (node.matches && (node.matches('.selectbox') || node.matches('.selectbox-item') || node.querySelector('.selectbox'))) {
-                            shouldHide = true;
+                            shouldProcess = true;
                         }
                     }
                 });
             }
         });
 
-        if (shouldHide) {
-            // Робимо кілька спроб з різною затримкою, щоб наздогнати рендеринг
-            setTimeout(hideUnwantedItems, 10);
-            setTimeout(hideUnwantedItems, 100);
-            setTimeout(hideUnwantedItems, 300);
+        if (shouldProcess) {
+            // Кілька спроб, щоб встигнути за рендерингом
+            setTimeout(processMenu, 10);
+            setTimeout(processMenu, 100);
+            setTimeout(processMenu, 300);
         }
     });
 
@@ -61,8 +77,7 @@
             childList: true,
             subtree: true
         });
-        // Початкова перевірка
-        setTimeout(hideUnwantedItems, 500);
+        setTimeout(processMenu, 500);
     }
 
     if (window.appready) {
