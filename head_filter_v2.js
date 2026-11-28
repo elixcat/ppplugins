@@ -131,17 +131,18 @@
             });
         }
 
-        // ==========================================
+// ==========================================
 // 6. СТВОРЕННЯ КНОПКИ "ЗАКЛАДКИ" (З ЕМОДЗІ)
 // ==========================================
 function addBookmarksButton() {
-    // Перевіряємо, чи вже створена кнопка
     if ($('.open--bookmarks').length) return;
 
-    // Створюємо кнопку. Загортаємо емодзі в span і додаємо inline-стилі для ідеального центрування
-    var btn = $('<div class="head__action selector open--bookmarks"><span style="display: flex; align-items: center; justify-content: center; width: 1em; height: 1em; font-size: 1.3em; line-height: 1; margin-top: 0.1em;">★</span></div>');
+    // ЗМІНЮЙТЕ ЦЕ ЗНАЧЕННЯ ДЛЯ ПОЗИЦІОНУВАННЯ (наприклад, -3px, -4px, 1px)
+    var icon_shift_y = '-3px'; 
 
-    // Додаємо обробник кліку для переходу до закладок
+    // Створюємо кнопку. Додаємо transform: translateY для зсуву
+    var btn = $('<div class="head__action selector open--bookmarks"><span style="display: flex; align-items: center; justify-content: center; width: 1em; height: 1em; font-size: 1.3em; line-height: 1; transform: translateY(' + icon_shift_y + ');">⭐</span></div>');
+
     btn.on('click', function() {
         Lampa.Activity.push({
             url: 'bookmarks',
@@ -151,7 +152,6 @@ function addBookmarksButton() {
         });
     });
 
-    // Вставляємо кнопку відразу ПІСЛЯ кнопки пошуку
     var $search = $('.head__action.open--search');
     if ($search.length) {
         $search.after(btn);
