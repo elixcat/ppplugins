@@ -4,20 +4,55 @@
     if (window.hide_meta_mood_ready) return;
     window.hide_meta_mood_ready = true;
 
-    // ========== ЧАСТИНА 1: Приховування рядів "Метаданные" та "Настроения" ==========
+    // ========== ЧАСТИНА 1: Приховування рядів "Метаданные", "Настроения" та кнопки "Мовлення" ==========
+    
     function startMeta() {
-        // Событие приходит до того, как Lampa собирает ряды карточки.
-        // Убираем данные, и ряды «Метаданные» и «Настроения» не создаются.
         Lampa.Listener.follow('full', function (e) {
             if (e.type === 'start' && e.data) delete e.data.metadata;
         });
     }
 
-    // прячем колесо загрузки в центре экрана (при переходе по вкладкам и разделам)
+    // Приховуємо колесо завантаження
     function hideLoader() {
         var style = document.createElement('style');
         style.textContent = '.activity__loader { display: none !important; }';
         document.head.appendChild(style);
+    }
+
+    // Надійне приховування кнопки "Мовлення" (слідкуємо за її появою в DOM)
+    function hideBroadcast() {
+        // Додаємо базовий стиль
+        var style = document.createElement('style');
+        style.textContent = '.open--broadcast { display: none !important; }';
+        document.head.appendChild(style);
+
+        // Створюємо спостерігач, який буде ловити появу цієї кнопки на будь-якому екрані
+        var observer = new MutationObserver(function (mutations) {
+            mutations.forEach(function (mutation) {
+                if (mutation.addedNodes.length) {
+                    mutation.addedNodes.forEach(function (node) {
+                        if (node.nodeType === 1) { // Якщо це елемент
+                            // Перевіряємо сам вузол
+                            if (node.matches && node.matches('.open--broadcast')) {
+                                node.style.setProperty('display', 'none', 'important');
+                            }
+                            // Перевіряємо нащадків (якщо додався цілий блок)
+                            if (node.querySelectorAll) {
+                                node.querySelectorAll('.open--broadcast').forEach(function (el) {
+                                    el.style.setProperty('display', 'none', 'important');
+                                });
+                            }
+                        }
+                    });
+                }
+            });
+        });
+
+        // Запускаємо спостереження за всім документом
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
     }
 
     // ========== ЧАСТИНА 2: Приховування елементів "немає історії перегляду" ==========
@@ -119,10 +154,7 @@
 
     // ========== ІНІЦІАЛІЗАЦІЯ ==========
     function start() {
-        // Частина 1 — підписка на 'full'
         if (window.Lampa && Lampa.Listener) startMeta();
-
-        // Частина 2 — запуск спостерігача
         startHide();
     }
 
@@ -132,5 +164,6 @@
     }
 
     hideLoader();
+    hideBroadcast(); // Запускаємо надійне приховування
     wait();
 })();
