@@ -139,7 +139,7 @@ function addBookmarksButton() {
     if ($('.open--bookmarks').length) return;
 
     // Створюємо кнопку. Загортаємо емодзі в span і додаємо inline-стилі для ідеального центрування
-    var btn = $('<div class="head__action selector open--bookmarks"><span style="display: flex; align-items: center; justify-content: center; width: 1em; height: 1em; font-size: 1.3em; line-height: 1; margin-top: 0.1em;">⭐</span></div>');
+    var btn = $('<div class="head__action selector open--bookmarks"><span style="display: flex; align-items: center; justify-content: center; width: 1em; height: 1em; font-size: 1.3em; line-height: 1; margin-top: 0.1em;">★</span></div>');
 
     // Додаємо обробник кліку для переходу до закладок
     btn.on('click', function() {
