@@ -132,33 +132,33 @@
         }
 
         // ==========================================
-        // 6. СТВОРЕННЯ КНОПКИ "ЗАКЛАДКИ" (З ЕМОДЗІ)
-        // ==========================================
-        function addBookmarksButton() {
-            // Перевіряємо, чи вже створена кнопка
-            if ($('.open--bookmarks').length) return;
+// 6. СТВОРЕННЯ КНОПКИ "ЗАКЛАДКИ" (З ЕМОДЗІ)
+// ==========================================
+function addBookmarksButton() {
+    // Перевіряємо, чи вже створена кнопка
+    if ($('.open--bookmarks').length) return;
 
-            // Створюємо кнопку з емодзі замість SVG
-            var btn = $('<div class="head__action selector open--bookmarks" style="font-size: 1.2em; display: flex; align-items: center; justify-content: center;">⭐</div>');
+    // Створюємо кнопку. Загортаємо емодзі в span і додаємо inline-стилі для ідеального центрування
+    var btn = $('<div class="head__action selector open--bookmarks"><span style="display: flex; align-items: center; justify-content: center; width: 1em; height: 1em; font-size: 1.3em; line-height: 1; margin-top: 0.1em;">⭐</span></div>');
 
-            // Додаємо обробник кліку для переходу до закладок
-            btn.on('click', function() {
-                Lampa.Activity.push({
-                    url: 'bookmarks',
-                    title: Lampa.Lang.translate('bookmarks'),
-                    component: 'bookmarks',
-                    page: 1
-                });
-            });
+    // Додаємо обробник кліку для переходу до закладок
+    btn.on('click', function() {
+        Lampa.Activity.push({
+            url: 'bookmarks',
+            title: Lampa.Lang.translate('bookmarks'),
+            component: 'bookmarks',
+            page: 1
+        });
+    });
 
-            // Вставляємо кнопку відразу ПІСЛЯ кнопки пошуку
-            var $search = $('.head__action.open--search');
-            if ($search.length) {
-                $search.after(btn);
-            } else {
-                $('.head__actions').prepend(btn);
-            }
-        }
+    // Вставляємо кнопку відразу ПІСЛЯ кнопки пошуку
+    var $search = $('.head__action.open--search');
+    if ($search.length) {
+        $search.after(btn);
+    } else {
+        $('.head__actions').prepend(btn);
+    }
+}
 
         // ==========================================
         // 7. СЛУХАЧІ ПОДІЙ
